@@ -88,7 +88,7 @@ All fields are optional; defaults shown.
 
 - **Search candidates carry no description**: the skills.sh search API returns id/name/installs/source only; descriptions arrive after install.
 - **Real-session model-driven verification** (find → ask_user_question → install → skill load) requires model credentials and was not executed in this environment; unit/snapshot tests and the network smoke cover the plugin side, and the catalog/skill-tool path is native dsh behavior.
-- **Version skew**: development and loading tests target npm `@deepseek-ai/*@0.1.0-rc.6`; the local source checkout (rc.5) was not re-verified.
+- **Version compatibility**: development and loading tests target npm `@deepseek-ai/*@0.1.0-rc.6`; the source checkout (rc.5) was verified in an isolated instance (probe-confirmed apply execution and healthy boot).
 - **CLI stdout is advisory**: outcomes are judged from the filesystem (the adopted skill directory), never from CLI prose.
 - **node_modules-synced skills have no remote source**: `update` is unavailable for `/skill sync` adoptions; re-sync or install manually.
 

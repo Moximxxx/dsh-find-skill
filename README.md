@@ -88,7 +88,7 @@ dsh plugin --profile web add dsh-find-skill
 
 - **搜索候选不含描述**：skills.sh 搜索 API 只返回 id/name/installs/source；描述在安装后才有。
 - **真实会话的模型驱动验证**（find → ask_user_question → install → skill 加载）需要模型凭据，本环境未执行；插件侧由单元/快照测试与网络冒烟覆盖，目录与 skill 工具路径是 dsh 原生行为。
-- **版本偏差**：开发与加载测试针对 npm `@deepseek-ai/*@0.1.0-rc.6`；本地源码检出（rc.5）未重新验证。
+- **版本兼容**：开发与加载测试针对 npm `@deepseek-ai/*@0.1.0-rc.6`；源码检出（rc.5）已在隔离环境实测通过（探针验证 apply 执行 + 启动健康）。
 - **CLI stdout 仅供参考**：结果以文件系统为准（收养的技能目录），从不依赖 CLI 散文输出。
 - **node_modules 同步的技能无远程来源**：`/skill sync` 收养的技能 `update` 不可用（无 provenance source），需重新 sync 或手动安装。
 
