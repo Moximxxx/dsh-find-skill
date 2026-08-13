@@ -12,7 +12,8 @@ The plugin lets the **LLM decide** when a task needs a skill no existing tool or
 - **`skill_install`** — fetch through the official CLI (`npx -y skills@latest`, auto-latest per project decision) inside an isolated throwaway work/home pair, then adopt only the requested skill into a managed scope. Temp installs register as runtime skills; project/global installs are written to managed roots and exposed through a self-owned `ctx.skills` provider (rank 350, configurable).
 - **`skill_remove`** — remove from temp / project / global; temp is tried first when no scope is given.
 - **`/skill` command** — human-facing `find | install | update | sync | remove | list`; `update` re-fetches the recorded source and replaces the bundle; `sync` scans project `node_modules` skills via the official CLI's `experimental_sync` and adopts them into the managed root.
-- **Lifecycle** — temp skills are owned by the installing session and disposed on `session/disposed`; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
+- **Lifecycle** — temp skills are owned by the installing session and disposed on `session/disposed`; `compactDisposePolicy: keep | dispose | ask` controls compaction behavior.
+- **Web UI cards** — the `dsh-find-skill-client` package renders dedicated, replayable, read-only conversation cards for `skill_find` / `skill_install` / `skill_remove` tool calls.; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
 
 ## Install / Load
 
@@ -91,6 +92,7 @@ All fields are optional; defaults shown.
 - **CLI stdout is advisory**: outcomes are judged from the filesystem (the adopted skill directory), never from CLI prose.
 - **Real-session model-driven flow verified** (headless with a real model: skill_find → skill_install temp → skill load); the full loop passed.
 - **node_modules-synced skills have no remote source**: `update` is unavailable for `/skill sync` adoptions; re-sync or install manually.
+- **Web cards are read-only**: no install/remove buttons yet; labels are fixed English, i18n deferred.
 
 ## License
 

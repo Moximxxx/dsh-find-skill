@@ -14,6 +14,9 @@ import type {
 } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ChatNodeViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 
+/** Locale namespace for this client plugin. */
+export const NS = 'dsh-find-skill'
+
 /** Which plugin tool produced this card. */
 export type SkillToolAction = 'find' | 'install' | 'remove'
 
@@ -94,19 +97,18 @@ function titleOf(data: SkillCallData): string {
   const args = data.args
   switch (data.action) {
     case 'find':
-      return `Search skills: ${String(args.query ?? '')}`
+      return '🔍 ' + String(args.query ?? '')
     case 'install':
-      return `Install skill: ${String(args.source ?? '')}${args.scope !== undefined ? ' (' + String(args.scope) + ')' : ''}`
+      return '📦 ' + String(args.source ?? '') + (args.scope !== undefined ? ' (' + String(args.scope) + ')' : '')
     case 'remove':
-      return `Remove skill: ${String(args.name ?? '')}${args.scope !== undefined ? ' (' + String(args.scope) + ')' : ''}`
+      return '🗑 ' + String(args.name ?? '') + (args.scope !== undefined ? ' (' + String(args.scope) + ')' : '')
   }
 }
 
 function SkillCallNodeView({ node }: ChatNodeViewProps<'dsh-find-skill'>) {
-  const title = titleOf(node.data)
   return createElement('div', { style: { padding: '4px 0' } },
-    createElement('strong', null, title),
-    createElement('div', { style: { opacity: 0.7, fontSize: 12 } }, node.data.action),
+    createElement('strong', null, titleOf(node.data)),
+    createElement('div', { style: { opacity: 0.7, fontSize: 12 } }, 'skill tool · ' + node.data.action),
   )
 }
 
@@ -122,5 +124,8 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({
     name: 'conversation.chat.node',
     key: 'dsh-find-skill',
+    // The slot's t seat is bound to the conversation namespace; this plugin
+    // renders plain strings and does not call t.
+    locale: 'conversation',
   }, SkillCallNodeView))
 }
