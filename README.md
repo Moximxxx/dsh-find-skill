@@ -14,7 +14,7 @@ The plugin lets the **LLM decide** when a task needs a skill no existing tool or
 - **`/skill` command** — human-facing `find | install | remove | list` for users who prefer commands over model-driven flows.
 - **Lifecycle** — temp skills are owned by the installing session and disposed on `session/disposed`; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
 
-## Quick Start / 快速开始
+## Install / Load / 安装 / 加载
 
 ### From source / 从源码下载（当前可用）
 
@@ -84,27 +84,6 @@ All fields are optional; defaults shown.
 - Tool calls and results flow through the standard `tool/call` / `tool/result` session events; nothing is injected outside the session log.
 - CLI installs can take tens of seconds on first use (npx downloads the latest `skills` package into the shared npm cache; the fetch itself runs in a throwaway HOME so no agent directories are touched).
 - Project/global skills are durable files; temp skills are in-memory registrations with materialized directories under `tempSkillRoot`.
-
-## Development
-
-```bash
-pnpm install        # deps; uses --config.minimumReleaseAge=0 for rc.6 packages
-pnpm build          # tsc → lib/
-pnpm test           # vitest (unit + snapshot)
-node scripts/smoke.mjs   # real-network end-to-end (search + CLI install + remove)
-```
-
-The smoke script requires network and a working `npx`.
-
-### Release to main
-
-`main` is the clean release branch and never contains the dev-only `.dsh/` and `AGENTS.md` paths (they are tracked and updated normally on `develop`). Publish the current `develop` to `main` with:
-
-```bash
-bash scripts/release-to-main.sh
-```
-
-The script merges `develop` into `main` with full history, strips the two dev-only paths from `main`'s index, and pushes. Conflicts abort the script for manual resolution.
 
 ## Known Limitations and Deferred Work
 
