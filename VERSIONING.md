@@ -12,6 +12,8 @@ This file defines the versioning rules of dsh-find-skill. **No version change ma
 - 自管 provider（临时/项目/全局作用域，隔离根目录）
 - /skill 人类命令
 - 临时技能生命周期（会话结束清理、compact 策略 keep|dispose）
+
+发布状态：**已发布 npm**（latest tag）+ GitHub tag `0.1.0`（见下节）。
 - 双语 README、MIT 许可证、dsh bundle 清单
 
 ## 铁律 / Rules

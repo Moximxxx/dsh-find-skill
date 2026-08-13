@@ -48,7 +48,7 @@ dsh --profile web --dump-config   # confirm the dsh-find-skill row is in the plu
 dsh plugin --profile web add dsh-find-skill
 ```
 
-> **Coming after the first npm release.** Use the source path above until then.
+> Published to npm; install directly.
 
 ## Configuration
 

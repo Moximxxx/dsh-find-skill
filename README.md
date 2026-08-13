@@ -42,15 +42,13 @@ dsh plugin --profile web add /abs/path/to/dsh-find-skill
 dsh --profile web --dump-config   # 确认 dsh-find-skill 行在插件树内
 ```
 
-### 从 npm 下载（待发布）
+### 从 npm 下载
 
 ```bash
 dsh plugin --profile web add dsh-find-skill
 ```
 
-> **npm 包上传后可用。** 在此之前请使用源码方式。
-
-> **Coming after the first npm release.** Version 0.1.0 is not published to npm yet; use the source path above until then.
+> 插件已发布到 npm，可直接安装使用。
 
 ## 配置
 

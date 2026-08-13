@@ -3,3 +3,4 @@ lib/
 *.tsbuildinfo
 docs/
 *.tgz
+.npmrc
