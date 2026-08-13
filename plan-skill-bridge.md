@@ -90,16 +90,14 @@
 | P3 M1 | ✅ | 22 测试 + 真实网络冒烟（search → CLI 安装 temp/project → provider 可见 → remove） |
 | P4 M2 | ✅ | 会话归属追踪 + `session/disposed` 清理 + compact 策略；26 测试 |
 | P5 M3 | ✅ | render 纯函数 + 快照测试 + 命令解析测试（35 测试全绿）+ README（Model Experience / Known Limitations） |
-| P6 M4 | ✅ 准备完成 | peerDependencies 重构、dsh bundle 清单（cordis.patch.yml）、npm pack 25 文件、tarball 装进 web profile 按包名加载验证通过；**发布待用户执行**（npm 未登录） |
+| P6 M4 | ✅ 已完成 | **npm 已发布** `dsh-find-skill@0.1.0`（latest）；隔离实例从 npm 拉取安装验证通过；tag `0.1.0` 已推送；GitHub Release 待网页创建（token 无权限）；README 双语 npm 路径标记为可用 |
 
-### 发布步骤（用户执行）
-```bash
-cd /home/qjy/code/dsh-plugins
-npm login          # 或 pnpm login
-npm publish        # 或 pnpm publish
-# 验证：在任意 dsh 部署执行
-dsh plugin --profile web add dsh-find-skill
-```
+### 发布状态（2026-08-14 更新）
+
+- ✅ npm 已发布：`dsh-find-skill@0.1.0`（latest），`npm view dsh-find-skill` 可查
+- ✅ tag `0.1.0` 已推送到 GitHub（main 分支）
+- ⏳ GitHub Release：token 无 Release 写权限，网页创建：https://github.com/Moximxxx/dsh-find-skill/releases/new → 选 tag `0.1.0`
+- 发布流程详见 `PUBLISHING.md`；版本纪律见 `VERSIONING.md`
 
 ### 测试实例
 - npm 独立 dsh：`http://127.0.0.1:3900`（`/home/qjy/code/dsh-npm-test`，DSH_HOME=/tmp/dsh-test-home，PID 见 /tmp/dsh-3900.pid）
