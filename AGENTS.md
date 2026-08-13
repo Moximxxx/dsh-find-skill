@@ -15,6 +15,12 @@ This repository develops plugins for DeepSeek Harness (dsh): TypeScript plugins 
 
 A plugin is a TS module exporting `name` and `apply(ctx)`. `ctx` is the service repository; `inject` declares dependencies; every registration is a reversible effect that unwinds on unload. Events dispatch as emit / waterfall / parallel / serial.
 
+## 版本号铁律 / Versioning rules
+
+**任何版本号变更（package.json version、git tag、npm 发布版本）必须先询问用户并获得确认，禁止自行 bump。** 不提前规划版本号（文档/issue/评论中不得预告未来版本号）；版本号必须与未完成功能高度统一（每次变更前审计 README 的 Known Limitations and Deferred Work 并同步更新）。完整策略见 `VERSIONING.md`。
+
+Version changes (package.json version, git tags, npm release versions) require explicit user confirmation first; never bump on your own. Do not pre-announce future version numbers. Versions must stay consistent with the Known Limitations and Deferred Work list in the README. Full policy: `VERSIONING.md`.
+
 ## 铁律 / Non-negotiable rules
 
 1. **模型可见 ⟺ 已记录**：任何到达模型请求的输入必须能从会话日志（`SessionEventMap` 事件流）重建；新模型输入 = 新增会话事件。
