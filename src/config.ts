@@ -18,6 +18,8 @@ export interface Config {
   readonly searchApiBase?: string
   /** Maximum remote search candidates returned per query. */
   readonly searchLimit?: number
+  /** Source owners boosted to the front of search results. */
+  readonly prioritySources?: string[]
   /** Command running the official `skills` CLI; defaults to the latest version via npx. */
   readonly cliCommand?: string
   /** Default scope when the model installs a skill without an explicit scope. */
@@ -46,6 +48,7 @@ export interface Config {
 export const Config: Schema<Config> = Schema.object({
   searchApiBase: Schema.string().default('https://skills.sh'),
   searchLimit: Schema.number().min(1).max(100).default(20),
+  prioritySources: Schema.array(Schema.string()).default(['vercel-labs', 'vercel', 'anthropics', 'microsoft', 'google', 'github']),
   cliCommand: Schema.string().default('npx -y skills@latest'),
   installDefaultScope: Schema.union(['temp', 'project', 'global'] as const).default('temp'),
   projectSkillRoot: Schema.string().default('.dsh/skills-bridge'),

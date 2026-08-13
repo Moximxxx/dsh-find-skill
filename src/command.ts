@@ -61,6 +61,9 @@ async function handleSkillCommand(
         config.searchApiBase ?? 'https://skills.sh',
         parsed.arg,
         config.searchLimit ?? 20,
+        undefined,
+        undefined,
+        config.prioritySources,
       )
       if (candidates.length === 0) return { kind: 'success', text: 'no skills matched on skills.sh' }
       return {

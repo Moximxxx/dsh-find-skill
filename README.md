@@ -58,6 +58,7 @@ dsh plugin --profile web add dsh-find-skill
 |---|---|---|
 | `searchApiBase` | `https://skills.sh` | 搜索 API 基址（与 CLI `find` 同源）。 |
 | `searchLimit` | `20` | 每次搜索的最大候选数。 |
+| `prioritySources` | 官方源列表 | 搜索结果中优先展示的来源 owner（官方源在前，其余按安装数降序）。 |
 | `cliCommand` | `npx -y skills@latest` | 运行官方 CLI 的命令；可换成本地二进制路径。 |
 | `installDefaultScope` | `temp` | 模型未指定作用域时使用的默认作用域。 |
 | `projectSkillRoot` | `.dsh/skills-bridge` | 项目托管根目录（相对 git 根）。 |

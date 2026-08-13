@@ -58,6 +58,7 @@ All fields are optional; defaults shown.
 |---|---|---|
 | `searchApiBase` | `https://skills.sh` | Search API base (same source as CLI `find`). |
 | `searchLimit` | `20` | Max candidates per search. |
+| `prioritySources` | official list | Source owners boosted to the front of search results (priority first, then install count). |
 | `cliCommand` | `npx -y skills@latest` | Command running the official CLI; swap in a local binary path if desired. |
 | `installDefaultScope` | `temp` | Scope used when the model omits `scope`. |
 | `projectSkillRoot` | `.dsh/skills-bridge` | Project-managed root, relative to the git root. |
