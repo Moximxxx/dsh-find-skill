@@ -14,23 +14,43 @@
 - **`/skill` 命令** —— 面向人的 `find | install | remove | list` 子命令，适合偏好命令而非模型驱动流程的用户。
 - **生命周期** —— 临时技能归属于安装它的会话，会话结束时（`session/disposed`）自动清理；`compactDisposePolicy: keep | dispose` 控制压缩（compact）时的行为。
 
-## 安装 / 加载
+## 快速开始 / Quick Start
 
-标准 dsh 插件。通过 patch overlay 加载：
+### 从源码下载（当前可用）
 
-```yaml
-- insert:
-    - id: dsh-find-skill
-      name: 'dsh-find-skill'
+```bash
+git clone https://github.com/Moximxxx/dsh-find-skill.git
+cd dsh-find-skill
+git checkout develop          # 完整开发分支（含 AGENTS.md、.dsh/）
+pnpm install --config.minimumReleaseAge=0   # rc.6 依赖需绕过发布年龄策略
+pnpm build                    # tsc → lib/
+pnpm test                     # 单元 + 快照测试
 ```
 
-开发期可指向本地检出：
+加载进 dsh —— 开发期 overlay（热加载源码）：
 
 ```yaml
 - insert:
     - id: dsh-find-skill
       name: '/abs/path/to/dsh-find-skill/src/index.ts'
 ```
+
+或把本地检出作为 bundle 安装（先构建，再执行）：
+
+```bash
+dsh plugin --profile web add /abs/path/to/dsh-find-skill
+dsh --profile web --dump-config   # 确认 dsh-find-skill 行在插件树内
+```
+
+### 从 npm 下载（待发布）
+
+```bash
+dsh plugin --profile web add dsh-find-skill
+```
+
+> **npm 包上传后可用。** 当前版本 0.1.0 尚未发布到 npm，在此之前请使用源码方式。
+
+> **Coming after the first npm release.** Version 0.1.0 is not published to npm yet; use the source path above until then.
 
 ## 配置
 

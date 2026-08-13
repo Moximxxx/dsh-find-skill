@@ -14,23 +14,43 @@ The plugin lets the **LLM decide** when a task needs a skill no existing tool or
 - **`/skill` command** — human-facing `find | install | remove | list` for users who prefer commands over model-driven flows.
 - **Lifecycle** — temp skills are owned by the installing session and disposed on `session/disposed`; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
 
-## Install / load
+## Quick Start / 快速开始
 
-The plugin is a standard dsh plugin. Load it from a patch overlay:
+### From source / 从源码下载（当前可用）
 
-```yaml
-- insert:
-    - id: dsh-find-skill
-      name: 'dsh-find-skill'
+```bash
+git clone https://github.com/Moximxxx/dsh-find-skill.git
+cd dsh-find-skill
+git checkout develop          # 完整开发分支（含 AGENTS.md、.dsh/）
+pnpm install --config.minimumReleaseAge=0   # rc.6 依赖需绕过发布年龄策略
+pnpm build                    # tsc → lib/
+pnpm test                     # 单元 + 快照测试
 ```
 
-Or point at a local checkout during development:
+Load it into dsh — development overlay (hot source):
 
 ```yaml
 - insert:
     - id: dsh-find-skill
       name: '/abs/path/to/dsh-find-skill/src/index.ts'
 ```
+
+Or install the local checkout as a bundle (build first, then):
+
+```bash
+dsh plugin --profile web add /abs/path/to/dsh-find-skill
+dsh --profile web --dump-config   # 确认 dsh-find-skill 行在插件树内
+```
+
+### From npm / 从 npm 下载（待发布）
+
+```bash
+dsh plugin --profile web add dsh-find-skill
+```
+
+> **Coming after the first npm release.** Version 0.1.0 is not published to npm yet; use the source path above until then.
+
+> **npm 包上传后可用。** 当前版本 0.1.0 尚未发布到 npm，在此之前请使用源码方式。
 
 ## Configuration
 
