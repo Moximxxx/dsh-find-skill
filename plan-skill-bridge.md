@@ -102,3 +102,18 @@
 ### 测试实例
 - npm 独立 dsh：`http://127.0.0.1:3900`（`/home/qjy/code/dsh-npm-test`，DSH_HOME=/tmp/dsh-test-home，PID 见 /tmp/dsh-3900.pid）
 - 用户 dsh（3080）全程未受影响
+
+
+### 0.1.x 功能迭代状态（2026-08-14 追加）
+
+| 里程碑 | 内容 | 状态 | 验证 |
+|---|---|---|---|
+| 0.1.1 | /skill update（来源元数据 + 替换语义） | ✅ d29ae05 | 39 测试 + 真实网络冒烟含 update |
+| 0.1.2 | compactDisposePolicy ask（会话粒度 dispose） | ✅ ad3fcbe | 45 测试 |
+| 0.1.3 | find 来源信誉排序 | ✅ 6a78cae | 49 测试 |
+| 0.1.4 | /skill sync（experimental_sync 收养） | ✅ 9cae1ad | 52 测试 |
+| 0.1.5 | rc.5 兼容验证 | ✅ cf82007 | 隔离实例探针 + 健康启动 |
+| 0.1.6 | 真实会话模型驱动联调 | ✅ 891274f | headless + 真实模型全流程（find→install temp→skill 加载） |
+| 0.1.7 | Web UI 推荐卡（dsh-find-skill-client） | ✅ 81d6d61 | client.js 200 + boot manifest 收录；视觉待用户浏览器确认 |
+
+**版本纪律**：以上全部在 develop 上完成并推送；版本号仍为 0.1.0（未 bump）；main/npm 未动。版本变更与发布等待用户确认。
