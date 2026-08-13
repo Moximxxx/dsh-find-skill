@@ -1,22 +1,22 @@
 # dsh-find-skill
 
-English | [中文](README.zh.md)
+[English](README.md) | 中文
 
-Bridge the [vercel-labs/skills](https://github.com/vercel-labs/skills) open agent-skills ecosystem into [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness).
+将 [vercel-labs/skills](https://github.com/vercel-labs/skills) 开放 agent 技能生态接入 [DeepSeek Harness（dsh）](https://github.com/deepseek-ai/deepseek-harness)。
 
-The plugin lets the **LLM decide** when a task needs a skill no existing tool or loaded skill covers: the model searches the ecosystem (`skill_find`), asks the user which candidate and scope to install (`ask_user_question`, built into dsh), and loads it as **temp** (default, current session), **project** (shared with the workspace), or **global** (all sessions). Installs land in plugin-owned roots, isolated from hand-written `.dsh/skills` and shared `.agents/skills`.
+插件让 **LLM 自行决定**何时需要加载技能：当任务超出既有工具与已加载技能的能力时，模型搜索技能生态（`skill_find`）、通过 dsh 内置的 `ask_user_question` 询问用户选择哪个技能与作用域，然后加载为 **临时**（默认，仅当前会话）、**项目**（随工作区共享）或 **全局**（所有会话）。安装落在插件自有的根目录，与手写的 `.dsh/skills` 和共享的 `.agents/skills` 完全隔离。
 
-## Features
+## 功能
 
-- **`skill_find`** — remote search over the official skills.sh API (the same source the CLI `find` command queries). Candidates carry install counts, sources, browse URLs, and a local "installed" marker. Low-priority description: the model is told to use it only when no existing tool or loaded skill fits.
-- **`skill_install`** — fetch through the official CLI (`npx -y skills@latest`, auto-latest per project decision) inside an isolated throwaway work/home pair, then adopt only the requested skill into a managed scope. Temp installs register as runtime skills; project/global installs are written to managed roots and exposed through a self-owned `ctx.skills` provider (rank 350, configurable).
-- **`skill_remove`** — remove from temp / project / global; temp is tried first when no scope is given.
-- **`/skill` command** — human-facing `find | install | remove | list` for users who prefer commands over model-driven flows.
-- **Lifecycle** — temp skills are owned by the installing session and disposed on `session/disposed`; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
+- **`skill_find`** —— 通过官方 skills.sh API 远程搜索（与 CLI `find` 命令同源）。候选携带安装数、来源、浏览链接与本地"已安装"标记。工具描述为低优先级：明确要求模型仅在既有工具与已加载技能都不适用时使用。
+- **`skill_install`** —— 通过官方 CLI（`npx -y skills@latest`，按项目决策自动取最新版）在隔离的一次性 work/home 环境内抓取，只收养目标技能目录到托管作用域。临时安装注册为运行时技能；项目/全局安装写入托管根目录，并通过自有的 `ctx.skills` provider 暴露（rank 350，可配置）。
+- **`skill_remove`** —— 从临时/项目/全局移除；未指定作用域时按 临时→项目→全局 顺序尝试。
+- **`/skill` 命令** —— 面向人的 `find | install | remove | list` 子命令，适合偏好命令而非模型驱动流程的用户。
+- **生命周期** —— 临时技能归属于安装它的会话，会话结束时（`session/disposed`）自动清理；`compactDisposePolicy: keep | dispose` 控制压缩（compact）时的行为。
 
-## Install / Load / 安装 / 加载
+## 安装 / 加载
 
-### From source / 从源码下载（当前可用）
+### 从源码下载（当前可用）
 
 ```bash
 git clone https://github.com/Moximxxx/dsh-find-skill.git
@@ -27,7 +27,7 @@ pnpm build                    # tsc → lib/
 pnpm test                     # 单元 + 快照测试
 ```
 
-Load it into dsh — development overlay (hot source):
+加载进 dsh —— 开发期 overlay（热加载源码）：
 
 ```yaml
 - insert:
@@ -35,65 +35,65 @@ Load it into dsh — development overlay (hot source):
       name: '/abs/path/to/dsh-find-skill/src/index.ts'
 ```
 
-Or install the local checkout as a bundle (build first, then):
+或把本地检出作为 bundle 安装（先构建，再执行）：
 
 ```bash
 dsh plugin --profile web add /abs/path/to/dsh-find-skill
 dsh --profile web --dump-config   # 确认 dsh-find-skill 行在插件树内
 ```
 
-### From npm / 从 npm 下载（待发布）
+### 从 npm 下载（待发布）
 
 ```bash
 dsh plugin --profile web add dsh-find-skill
 ```
 
-> **Coming after the first npm release.** Use the source path above until then.
+> **npm 包上传后可用。** 在此之前请使用源码方式。
 
-> **npm 包上传后可用。** 当前版本 0.1.0 尚未发布到 npm，在此之前请使用源码方式。
+> **Coming after the first npm release.** Version 0.1.0 is not published to npm yet; use the source path above until then.
 
-## Configuration
+## 配置
 
-All fields are optional; defaults shown.
+所有字段可选，括号内为默认值。
 
-| Field | Default | Meaning |
+| 字段 | 默认值 | 含义 |
 |---|---|---|
-| `searchApiBase` | `https://skills.sh` | Search API base (same source as CLI `find`). |
-| `searchLimit` | `20` | Max candidates per search. |
-| `cliCommand` | `npx -y skills@latest` | Command running the official CLI; swap in a local binary path if desired. |
-| `installDefaultScope` | `temp` | Scope used when the model omits `scope`. |
-| `projectSkillRoot` | `.dsh/skills-bridge` | Project-managed root, relative to the git root. |
-| `globalSkillRoot` | `<dshHome>/skills-bridge/global` | User-global managed root. |
-| `tempSkillRoot` | `<dshHome>/skills-bridge/tmp` | Temp materialization root. |
-| `providerRank` | `350` | Rank of provider candidates (lower wins duplicates). |
-| `compactDisposePolicy` | `keep` | `keep` or `dispose` temporary skills at compaction. |
-| `registerFindTool` / `registerInstallTool` / `registerRemoveTool` | `true` | Model tool switches. |
-| `registerCommand` | `true` | `/skill` command switch (looked up opportunistically). |
+| `searchApiBase` | `https://skills.sh` | 搜索 API 基址（与 CLI `find` 同源）。 |
+| `searchLimit` | `20` | 每次搜索的最大候选数。 |
+| `cliCommand` | `npx -y skills@latest` | 运行官方 CLI 的命令；可换成本地二进制路径。 |
+| `installDefaultScope` | `temp` | 模型未指定作用域时使用的默认作用域。 |
+| `projectSkillRoot` | `.dsh/skills-bridge` | 项目托管根目录（相对 git 根）。 |
+| `globalSkillRoot` | `<dshHome>/skills-bridge/global` | 用户全局托管根目录。 |
+| `tempSkillRoot` | `<dshHome>/skills-bridge/tmp` | 临时物化根目录。 |
+| `providerRank` | `350` | provider 候选的 rank（越小越优先）。 |
+| `compactDisposePolicy` | `keep` | 压缩时对临时技能 `keep`（保留）或 `dispose`（清除）。 |
+| `registerFindTool` / `registerInstallTool` / `registerRemoveTool` | `true` | 模型工具开关。 |
+| `registerCommand` | `true` | `/skill` 命令开关（按可用性查找 commands 服务）。 |
 
-## Usage flow (model-driven)
+## 使用流程（模型驱动）
 
-1. User asks for something; the model finds no existing tool or loaded skill fits.
-2. Model calls `skill_find` → reviews candidates (installs, source, URL).
-3. Model asks the user via the built-in `ask_user_question` (which candidate? temp/project/global?).
-4. Model calls `skill_install` → the skill appears in the session skill catalog on the next step; load it with the `skill` tool or the user can type `/<skill-name>`.
-5. Cleanup: temp skills disappear at session end or via `skill_remove`; project/global persist until removed.
+1. 用户提出需求；模型发现既有工具与已加载技能均不适用。
+2. 模型调用 `skill_find` → 评估候选（安装数、来源、链接）。
+3. 模型通过内置 `ask_user_question` 询问用户（选哪个技能？临时/项目/全局？）。
+4. 模型调用 `skill_install` → 技能在下一步进入会话技能目录；用 `skill` 工具加载，或用户直接输入 `/<skill-name>`。
+5. 清理：临时技能在会话结束或 `skill_remove` 时消失；项目/全局技能持久存在直到移除。
 
-## Model Experience
+## 模型体验
 
-- The three tools are registered with low-priority descriptions and can be disabled per tool; catalog noise is bounded by `searchLimit` and by installing only selected skills.
-- Tool calls and results flow through the standard `tool/call` / `tool/result` session events; nothing is injected outside the session log.
-- CLI installs can take tens of seconds on first use (npx downloads the latest `skills` package into the shared npm cache; the fetch itself runs in a throwaway HOME so no agent directories are touched).
-- Project/global skills are durable files; temp skills are in-memory registrations with materialized directories under `tempSkillRoot`.
+- 三个工具以低优先级描述注册，可逐工具关闭；目录噪音由 `searchLimit` 与"只安装选定技能"约束。
+- 工具调用与结果走标准 `tool/call` / `tool/result` 会话事件，无会话日志之外的旁路注入。
+- CLI 安装首次可能耗时数十秒（npx 向共享 npm 缓存下载最新 `skills` 包；抓取本身运行在一次性 HOME 中，不触碰任何 agent 目录）。
+- 项目/全局技能是持久文件；临时技能是内存注册 + `tempSkillRoot` 下的物化目录。
 
-## Known Limitations and Deferred Work
+## 已知限制与后续工作
 
-- **`compactDisposePolicy: 'ask'`** is deferred; only `keep` and `dispose` are implemented.
-- **No update command**: re-installing a skill replaces it; a dedicated `update` action is future work.
-- **Search candidates carry no description**: the skills.sh search API returns id/name/installs/source only; descriptions arrive after install.
-- **Real-session model-driven verification** (find → ask_user_question → install → skill load) requires model credentials and was not executed in this environment; unit/snapshot tests and the network smoke cover the plugin side, and the catalog/skill-tool path is native dsh behavior.
-- **Version skew**: development and loading tests target npm `@deepseek-ai/*@0.1.0-rc.6`; the local source checkout (rc.5) was not re-verified.
-- **CLI stdout is advisory**: outcomes are judged from the filesystem (the adopted skill directory), never from CLI prose.
+- **`compactDisposePolicy: 'ask'`** 暂缓实现；目前只有 `keep` 与 `dispose`。
+- **无 update 命令**：重新安装即替换；专门的 `update` 动作留待后续。
+- **搜索候选不含描述**：skills.sh 搜索 API 只返回 id/name/installs/source；描述在安装后才有。
+- **真实会话的模型驱动验证**（find → ask_user_question → install → skill 加载）需要模型凭据，本环境未执行；插件侧由单元/快照测试与网络冒烟覆盖，目录与 skill 工具路径是 dsh 原生行为。
+- **版本偏差**：开发与加载测试针对 npm `@deepseek-ai/*@0.1.0-rc.6`；本地源码检出（rc.5）未重新验证。
+- **CLI stdout 仅供参考**：结果以文件系统为准（收养的技能目录），从不依赖 CLI 散文输出。
 
-## License
+## 许可证
 
 MIT
