@@ -1,0 +1,4 @@
+# dsh-find-skill bundle patch: installs the plugin under its package name.
+- insert:
+    - id: dsh-find-skill
+      name: 'dsh-find-skill'

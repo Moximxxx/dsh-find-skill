@@ -1,0 +1,17 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`tool render snapshots > renders a remove result 1`] = `"web-design-guidelines removed from project"`;
+
+exports[`tool render snapshots > renders an empty find result 1`] = `"zzz-nothing matched no skills on skills.sh"`;
+
+exports[`tool render snapshots > renders an install result 1`] = `
+"vercel-react-best-practices installed (temp) at /tmp/roots/tmp/vercel-react-best-practices
+React and Next.js performance guidance."
+`;
+
+exports[`tool render snapshots > renders find results with mixed availability 1`] = `
+"1. React Best Practices (react-best-practices) — 185000 installs, vercel-labs/agent-skills
+   https://skills.sh/vercel-labs/agent-skills/react-best-practices
+2. React Performance (react-performance) — 3239 installs, affaan-m/ecc [installed]
+   https://skills.sh/affaan-m/ecc/react-performance"
+`;
