@@ -18,6 +18,11 @@
     "cordis.patch.yml"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Moximxxx/dsh-find-skill.git"
+  },
+  "homepage": "https://github.com/Moximxxx/dsh-find-skill#readme",
   "keywords": [
     "dsh-plugin",
     "dsh",
