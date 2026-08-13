@@ -76,6 +76,16 @@ node scripts/smoke.mjs   # 真实网络端到端（搜索 + CLI 安装 + 移除�
 
 冒烟脚本需要网络与可用的 `npx`。
 
+### 发布到 main
+
+`main` 是干净的发布分支，永远不包含开发专用路径 `.dsh/` 与 `AGENTS.md`（它们在 `develop` 上正常跟踪与更新）。把当前 `develop` 发布到 `main`：
+
+```bash
+bash scripts/release-to-main.sh
+```
+
+脚本以完整历史合并 `develop` 到 `main`，从 `main` 索引剥离两个开发专用路径并推送；冲突时脚本中止，交由手动解决。
+
 ## 已知限制与后续工作
 
 - **`compactDisposePolicy: 'ask'`** 暂缓实现；目前只有 `keep` 与 `dispose`。
