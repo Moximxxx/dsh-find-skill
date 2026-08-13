@@ -76,6 +76,16 @@ node scripts/smoke.mjs   # real-network end-to-end (search + CLI install + remov
 
 The smoke script requires network and a working `npx`.
 
+### Release to main
+
+`main` is the clean release branch and never contains the dev-only `.dsh/` and `AGENTS.md` paths (they are tracked and updated normally on `develop`). Publish the current `develop` to `main` with:
+
+```bash
+bash scripts/release-to-main.sh
+```
+
+The script merges `develop` into `main` with full history, strips the two dev-only paths from `main`'s index, and pushes. Conflicts abort the script for manual resolution.
+
 ## Known Limitations and Deferred Work
 
 - **`compactDisposePolicy: 'ask'`** is deferred; only `keep` and `dispose` are implemented.
