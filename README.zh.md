@@ -14,7 +14,7 @@
 - **`/skill` 命令** —— 面向人的 `find | install | remove | list` 子命令，适合偏好命令而非模型驱动流程的用户。
 - **生命周期** —— 临时技能归属于安装它的会话，会话结束时（`session/disposed`）自动清理；`compactDisposePolicy: keep | dispose` 控制压缩（compact）时的行为。
 
-## 快速开始 / Quick Start
+## 安装 / 加载 / Install / Load
 
 ### 从源码下载（当前可用）
 
@@ -84,27 +84,6 @@ dsh plugin --profile web add dsh-find-skill
 - 工具调用与结果走标准 `tool/call` / `tool/result` 会话事件，无会话日志之外的旁路注入。
 - CLI 安装首次可能耗时数十秒（npx 向共享 npm 缓存下载最新 `skills` 包；抓取本身运行在一次性 HOME 中，不触碰任何 agent 目录）。
 - 项目/全局技能是持久文件；临时技能是内存注册 + `tempSkillRoot` 下的物化目录。
-
-## 开发
-
-```bash
-pnpm install        # 安装依赖（rc.6 包需 --config.minimumReleaseAge=0）
-pnpm build          # tsc → lib/
-pnpm test           # vitest（单元 + 快照）
-node scripts/smoke.mjs   # 真实网络端到端（搜索 + CLI 安装 + 移除）
-```
-
-冒烟脚本需要网络与可用的 `npx`。
-
-### 发布到 main
-
-`main` 是干净的发布分支，永远不包含开发专用路径 `.dsh/` 与 `AGENTS.md`（它们在 `develop` 上正常跟踪与更新）。把当前 `develop` 发布到 `main`：
-
-```bash
-bash scripts/release-to-main.sh
-```
-
-脚本以完整历史合并 `develop` 到 `main`，从 `main` 索引剥离两个开发专用路径并推送；冲突时脚本中止，交由手动解决。
 
 ## 已知限制与后续工作
 

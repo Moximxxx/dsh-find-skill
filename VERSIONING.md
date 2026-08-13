@@ -41,5 +41,5 @@ This file defines the versioning rules of dsh-find-skill. **No version change ma
 ## 与分支模型的关系 / Branch model
 
 - 版本号统一在 `develop` 上维护。
-- 发布到 `main` 使用 `scripts/release-to-main.sh`（合并时剥离 `.dsh/` 与 `AGENTS.md`）。
+- 发布到 `main` 使用 `scripts/release-to-main.sh`（合并时剥离 `.dsh/` 与 `AGENTS.md`）：`bash scripts/release-to-main.sh`。内容冲突自动取 develop 侧；仅 `.dsh/` 与 `AGENTS.md` 的 modify/delete 冲突被解析为删除；其他未合并条目会中止脚本等待手动解决。
 - 发行 tag 打在 `main`：`git tag v<version> && git push origin v<version>`（打 tag 属于版本变更动作，同样必须先询问用户）。
