@@ -25,8 +25,10 @@ fi
 git checkout main
 git pull --ff-only origin main 2>/dev/null || true
 
-if ! git merge --no-commit --no-ff develop; then
-  echo "error: merge conflicts; resolve them on main, then commit manually" >&2
+# -X theirs: main is defined as "develop's content, minus dev-only files", so
+# content conflicts (including modify/delete on stripped paths) resolve to develop.
+if ! git merge -X theirs --no-commit --no-ff develop; then
+  echo "error: merge failed unexpectedly; resolve it on main manually" >&2
   echo "hint: after resolving, run: git rm -r --cached --quiet ${DEV_FILES[*]} && rm -rf -- ${DEV_FILES[*]} && git commit" >&2
   git checkout ${START_BRANCH}
   exit 1
