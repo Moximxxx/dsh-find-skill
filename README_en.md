@@ -11,7 +11,7 @@ The plugin lets the **LLM decide** when a task needs a skill no existing tool or
 - **`skill_find`** — remote search over the official skills.sh API (the same source the CLI `find` command queries). Candidates carry install counts, sources, browse URLs, and a local "installed" marker. Low-priority description: the model is told to use it only when no existing tool or loaded skill fits.
 - **`skill_install`** — fetch through the official CLI (`npx -y skills@latest`, auto-latest per project decision) inside an isolated throwaway work/home pair, then adopt only the requested skill into a managed scope. Temp installs register as runtime skills; project/global installs are written to managed roots and exposed through a self-owned `ctx.skills` provider (rank 350, configurable).
 - **`skill_remove`** — remove from temp / project / global; temp is tried first when no scope is given.
-- **`/skill` command** — human-facing `find | install | update | remove | list` for users who prefer commands over model-driven flows; `update` re-fetches the recorded source and replaces the bundle.
+- **`/skill` command** — human-facing `find | install | update | sync | remove | list`; `update` re-fetches the recorded source and replaces the bundle; `sync` scans project `node_modules` skills via the official CLI's `experimental_sync` and adopts them into the managed root.
 - **Lifecycle** — temp skills are owned by the installing session and disposed on `session/disposed`; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
 
 ## Install / Load
@@ -90,6 +90,7 @@ All fields are optional; defaults shown.
 - **Real-session model-driven verification** (find → ask_user_question → install → skill load) requires model credentials and was not executed in this environment; unit/snapshot tests and the network smoke cover the plugin side, and the catalog/skill-tool path is native dsh behavior.
 - **Version skew**: development and loading tests target npm `@deepseek-ai/*@0.1.0-rc.6`; the local source checkout (rc.5) was not re-verified.
 - **CLI stdout is advisory**: outcomes are judged from the filesystem (the adopted skill directory), never from CLI prose.
+- **node_modules-synced skills have no remote source**: `update` is unavailable for `/skill sync` adoptions; re-sync or install manually.
 
 ## License
 

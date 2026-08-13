@@ -5,11 +5,11 @@
  * @module dsh-find-skill/install
  */
 
-import { cp, mkdir, readFile, rm } from 'node:fs/promises'
+import { cp, mkdir, readFile, readdir, rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { SkillRegistration } from '@deepseek-ai/dsh-skill'
-import { cleanupFetch, fetchSkillViaCli } from './cli.ts'
+import { cleanupFetch, fetchSkillViaCli, syncSkillsViaCli } from './cli.ts'
 import type { Config, InstallScope } from './config.ts'
 import { parseSkillContent } from './frontmatter.ts'
 import { writeMetadata } from './metadata.ts'
@@ -251,6 +251,72 @@ export async function updateSkill(
     }
   }
   throw new Error(`${name} is not installed in any managed scope`)
+}
+
+/** Result of a successful node_modules sync. */
+export interface SyncResult {
+  /** Skills adopted into the managed project root. */
+  readonly synced: readonly { name: string; path: string }[]
+}
+
+async function dirNames(root: string): Promise<string[]> {
+  const entries = await readdir(root, { withFileTypes: true }).catch(() => [])
+  return entries.filter(entry => entry.isDirectory()).map(entry => entry.name)
+}
+
+/**
+ * Adopt newly created skill directories from a CLI install root into a
+ * managed root by moving them (validating SKILL.md first).
+ * @param installedRoot - the CLI-written .agents/skills directory.
+ * @param destRoot - the managed destination root.
+ * @param before - directory names present before the CLI ran.
+ * @returns names of adopted skills.
+ */
+export async function adoptNewSkills(installedRoot: string, destRoot: string, before: string[]): Promise<string[]> {
+  const after = await dirNames(installedRoot)
+  const added = after.filter(name => !before.includes(name))
+  const adopted: string[] = []
+  await mkdir(destRoot, { recursive: true })
+  for (const name of added) {
+    const src = join(installedRoot, name)
+    try {
+      const raw = await readFile(join(src, 'SKILL.md'), 'utf8')
+      parseSkillContent(raw, src)
+    } catch {
+      continue // unreadable or invalid entries stay untouched in .agents/skills
+    }
+    const dest = join(destRoot, name)
+    await rm(dest, { recursive: true, force: true })
+    await rename(src, dest)
+    await writeMetadata(dest, { source: 'node_modules-sync', installedAt: Date.now(), scope: 'project' })
+    adopted.push(name)
+  }
+  return adopted
+}
+
+/**
+ * Sync skills declared in the project's node_modules into the managed project
+ * root, via the official CLI's experimental_sync, adopting only the newly
+ * created universal installs.
+ * @param config - validated plugin configuration.
+ * @param provider - managed provider used to invalidate catalogs.
+ * @param cwd - workspace selector for the project root.
+ * @param signal - cancellation signal for CLI work.
+ * @returns the adopted skills.
+ */
+export async function syncSkills(
+  config: Config,
+  provider: ManagedSkillProvider,
+  cwd?: string,
+  signal?: AbortSignal,
+): Promise<SyncResult> {
+  const roots = resolveRoots(config, cwd)
+  const installedRoot = join(roots.projectRoot, '.agents', 'skills')
+  const before = await dirNames(installedRoot)
+  await syncSkillsViaCli(config.cliCommand ?? 'npx -y skills@latest', roots.projectRoot, roots.tempSkillDir, signal)
+  const adopted = await adoptNewSkills(installedRoot, roots.projectSkillDir, before)
+  if (adopted.length > 0) provider.notifyChanged()
+  return { synced: adopted.map(name => ({ name, path: join(roots.projectSkillDir, name) })) }
 }
 
 async function dirExists(dir: string): Promise<boolean> {

@@ -142,6 +142,37 @@ export async function locateInstalledSkill(installedRoot: string, skillName?: st
 }
 
 /**
+ * Run the CLI's experimental_sync in a real project, with an isolated HOME so
+ * no real agent directories are touched. Skills land in the project's
+ * universal <project>/.agents/skills directory for adoption.
+ * @param cliCommand - configured CLI command line.
+ * @param projectRoot - project whose node_modules is scanned.
+ * @param workBase - base directory for throwaway scratch space.
+ * @param signal - cancellation signal.
+ * @returns a promise settling when sync finishes.
+ */
+export async function syncSkillsViaCli(
+  cliCommand: string,
+  projectRoot: string,
+  workBase: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  await mkdir(workBase, { recursive: true })
+  const scratchRoot = await mkdtemp(join(workBase, 'sync-'))
+  const home = join(scratchRoot, 'home')
+  await mkdir(home, { recursive: true })
+  try {
+    await runCli(cliCommand, ['experimental_sync', '-y'], {
+      cwd: projectRoot,
+      env: throwawayEnv(home),
+      signal,
+    })
+  } finally {
+    await rm(scratchRoot, { recursive: true, force: true })
+  }
+}
+
+/**
  * Remove a throwaway fetch scratch root.
  * @param fetched - the fetched skill whose scratch space should be discarded.
  * @returns a promise settling when cleanup finishes.

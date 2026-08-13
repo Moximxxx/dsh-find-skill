@@ -11,7 +11,7 @@
 - **`skill_find`** —— 通过官方 skills.sh API 远程搜索（与 CLI `find` 命令同源）。候选携带安装数、来源、浏览链接与本地"已安装"标记。工具描述为低优先级：明确要求模型仅在既有工具与已加载技能都不适用时使用。
 - **`skill_install`** —— 通过官方 CLI（`npx -y skills@latest`，按项目决策自动取最新版）在隔离的一次性 work/home 环境内抓取，只收养目标技能目录到托管作用域。临时安装注册为运行时技能；项目/全局安装写入托管根目录，并通过自有的 `ctx.skills` provider 暴露（rank 350，可配置）。
 - **`skill_remove`** —— 从临时/项目/全局移除；未指定作用域时按 临时→项目→全局 顺序尝试。
-- **`/skill` 命令** —— 面向人的 `find | install | update | remove | list` 子命令，适合偏好命令而非模型驱动流程的用户；`update` 按安装时记录的来源重新拉取并替换。
+- **`/skill` 命令** —— 面向人的 `find | install | update | sync | remove | list` 子命令；`update` 按安装时记录的来源重新拉取并替换；`sync` 通过官方 CLI 的 `experimental_sync` 扫描项目 `node_modules` 中声明的技能并收养进托管根。
 - **生命周期** —— 临时技能归属于安装它的会话，会话结束时（`session/disposed`）自动清理；`compactDisposePolicy: keep | dispose | ask` 控制压缩（compact）时的行为。
 
 ## 安装 / 加载
@@ -90,6 +90,7 @@ dsh plugin --profile web add dsh-find-skill
 - **真实会话的模型驱动验证**（find → ask_user_question → install → skill 加载）需要模型凭据，本环境未执行；插件侧由单元/快照测试与网络冒烟覆盖，目录与 skill 工具路径是 dsh 原生行为。
 - **版本偏差**：开发与加载测试针对 npm `@deepseek-ai/*@0.1.0-rc.6`；本地源码检出（rc.5）未重新验证。
 - **CLI stdout 仅供参考**：结果以文件系统为准（收养的技能目录），从不依赖 CLI 散文输出。
+- **node_modules 同步的技能无远程来源**：`/skill sync` 收养的技能 `update` 不可用（无 provenance source），需重新 sync 或手动安装。
 
 ## 许可证
 
