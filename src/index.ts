@@ -10,6 +10,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { applyCompactPolicy } from './lifecycle.ts'
 import { registerManagedProvider } from './provider.ts'
 import { TempSkillManager } from './temp.ts'
 import { registerTools } from './tools.ts'
@@ -56,13 +57,34 @@ export function apply(ctx: Context, config: Config = {}): void {
     void tempManager.disposeOwned(session.id)
   })
 
-  // Compaction policy: dispose ALL temporary skills when configured.
+  // Compaction policy: session-scoped disposal, optionally asking the user.
   ctx.on('session/event', async (session, event) => {
     // compaction/* event types are declared by the optional dsh-compaction package.
     if ((event as { type: string }).type !== 'compaction/start') return
     const policy: CompactDisposePolicy = validated.compactDisposePolicy ?? 'keep'
-    if (policy === 'dispose') {
-      await tempManager.disposeAll()
-    }
+    const owner = String((session as { id: unknown }).id)
+    await applyCompactPolicy(
+      policy,
+      owner,
+      (sessionOwner) => tempManager.disposeOwned(sessionOwner),
+      async () => {
+        const userQuestions = ctx.get('userQuestions') as
+          | { ask: (options: unknown) => Promise<{ answers: Array<{ selected: string[] }> }> }
+          | undefined
+        if (userQuestions === undefined) return false
+        const result = await userQuestions.ask({
+          questions: [{
+            id: 'dsh-find-skill-compact',
+            question: '会话即将压缩：是否清理本会话安装的临时技能？',
+            header: '临时技能清理',
+            options: [
+              { label: '保留', description: '临时技能在压缩后继续可用' },
+              { label: '清理', description: '移除本会话的临时技能及其物化目录' },
+            ],
+          }],
+        })
+        return result.answers[0]?.selected.includes('清理') ?? false
+      },
+    )
   })
 }

@@ -10,7 +10,7 @@ import Schema from '@deepseek-ai/schemastery'
 export type InstallScope = 'temp' | 'project' | 'global'
 
 /** Compaction behavior for temporary skills. */
-export type CompactDisposePolicy = 'keep' | 'dispose'
+export type CompactDisposePolicy = 'keep' | 'dispose' | 'ask'
 
 /** Deployment configuration for the dsh-find-skill plugin. */
 export interface Config {
@@ -52,7 +52,7 @@ export const Config: Schema<Config> = Schema.object({
   globalSkillRoot: Schema.string(),
   tempSkillRoot: Schema.string(),
   providerRank: Schema.number().min(1).max(1000).default(350),
-  compactDisposePolicy: Schema.union(['keep', 'dispose'] as const).default('keep'),
+  compactDisposePolicy: Schema.union(['keep', 'dispose', 'ask'] as const).default('keep'),
   registerFindTool: Schema.boolean().default(true),
   registerInstallTool: Schema.boolean().default(true),
   registerRemoveTool: Schema.boolean().default(true),
