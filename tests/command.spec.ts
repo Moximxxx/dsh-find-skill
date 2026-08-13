@@ -34,6 +34,7 @@ describe('parseSkillCommand', () => {
     expect(parseSkillCommand('sync')).toEqual({ action: 'sync' })
   })
 
+  it('rejects invalid actions and scopes', () => {
     expect(() => parseSkillCommand('frobnicate x')).toThrow(/not a \/skill action/)
     expect(() => parseSkillCommand('install x --scope bogus')).toThrow(/not a valid scope/)
   })
