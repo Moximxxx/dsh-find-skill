@@ -1,5 +1,7 @@
 # dsh-find-skill
 
+English | [中文](README.zh.md)
+
 Bridge the [vercel-labs/skills](https://github.com/vercel-labs/skills) open agent-skills ecosystem into [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness).
 
 The plugin lets the **LLM decide** when a task needs a skill no existing tool or loaded skill covers: the model searches the ecosystem (`skill_find`), asks the user which candidate and scope to install (`ask_user_question`, built into dsh), and loads it as **temp** (default, current session), **project** (shared with the workspace), or **global** (all sessions). Installs land in plugin-owned roots, isolated from hand-written `.dsh/skills` and shared `.agents/skills`.
