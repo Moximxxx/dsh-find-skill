@@ -1,6 +1,6 @@
 # dsh-find-skill
 
-[English](README.md) | 中文
+[English](README_en.md) | 中文
 
 将 [vercel-labs/skills](https://github.com/vercel-labs/skills) 开放 agent 技能生态接入 [DeepSeek Harness（dsh）](https://github.com/deepseek-ai/deepseek-harness)。
 
