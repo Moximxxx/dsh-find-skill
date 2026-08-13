@@ -11,7 +11,7 @@ The plugin lets the **LLM decide** when a task needs a skill no existing tool or
 - **`skill_find`** — remote search over the official skills.sh API (the same source the CLI `find` command queries). Candidates carry install counts, sources, browse URLs, and a local "installed" marker. Low-priority description: the model is told to use it only when no existing tool or loaded skill fits.
 - **`skill_install`** — fetch through the official CLI (`npx -y skills@latest`, auto-latest per project decision) inside an isolated throwaway work/home pair, then adopt only the requested skill into a managed scope. Temp installs register as runtime skills; project/global installs are written to managed roots and exposed through a self-owned `ctx.skills` provider (rank 350, configurable).
 - **`skill_remove`** — remove from temp / project / global; temp is tried first when no scope is given.
-- **`/skill` command** — human-facing `find | install | remove | list` for users who prefer commands over model-driven flows.
+- **`/skill` command** — human-facing `find | install | update | remove | list` for users who prefer commands over model-driven flows; `update` re-fetches the recorded source and replaces the bundle.
 - **Lifecycle** — temp skills are owned by the installing session and disposed on `session/disposed`; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
 
 ## Install / Load
@@ -86,7 +86,6 @@ All fields are optional; defaults shown.
 ## Known Limitations and Deferred Work
 
 - **`compactDisposePolicy: 'ask'`** is deferred; only `keep` and `dispose` are implemented.
-- **No update command**: re-installing a skill replaces it; a dedicated `update` action is future work.
 - **Search candidates carry no description**: the skills.sh search API returns id/name/installs/source only; descriptions arrive after install.
 - **Real-session model-driven verification** (find → ask_user_question → install → skill load) requires model credentials and was not executed in this environment; unit/snapshot tests and the network smoke cover the plugin side, and the catalog/skill-tool path is native dsh behavior.
 - **Version skew**: development and loading tests target npm `@deepseek-ai/*@0.1.0-rc.6`; the local source checkout (rc.5) was not re-verified.

@@ -6,7 +6,7 @@ import { mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { searchSkills } from '../lib/search.js'
-import { installSkill, removeSkill } from '../lib/install.js'
+import { installSkill, removeSkill, updateSkill } from '../lib/install.js'
 import { ManagedSkillProvider } from '../lib/provider.js'
 import { TempSkillManager } from '../lib/temp.js'
 import { Config } from '../lib/config.js'
@@ -60,7 +60,19 @@ const listed2 = await provider.list({ cwd: join(base, 'proj') })
 console.log('provider candidates after project install:', listed2.map(c => c.name))
 if (!listed2.some(c => c.name === 'web-design-guidelines')) throw new Error('provider does not see project skill')
 
-// 5) 移除
+// 5) update（重新拉取同一来源替换）
+console.log('\\n== update (project) ==')
+const updated = await updateSkill(
+  { skills: { register: () => () => {} } },
+  config, provider, tempManager, 'project', 'web-design-guidelines',
+  join(base, 'proj'),
+)
+console.log('updated:', JSON.stringify(updated))
+if (!updated.updated) throw new Error('update failed')
+const listedAfterUpdate = await provider.list({ cwd: join(base, 'proj') })
+if (!listedAfterUpdate.some(c => c.name === 'web-design-guidelines')) throw new Error('provider lost skill after update')
+
+// 6) 移除
 console.log('\n== remove (project) ==')
 const removed = await removeSkill(provider, tempManager, 'project', 'web-design-guidelines', join(base, 'proj'))
 console.log('removed:', JSON.stringify(removed))

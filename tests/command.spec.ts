@@ -23,6 +23,13 @@ describe('parseSkillCommand', () => {
     expect(parseSkillCommand('')).toEqual({ action: 'list' })
   })
 
+  it('parses update with scope', () => {
+    expect(parseSkillCommand('update web-design-guidelines --scope project')).toEqual({
+      action: 'update',
+      arg: 'web-design-guidelines',
+      scope: 'project',
+    })
+  })
   it('rejects invalid actions and scopes', () => {
     expect(() => parseSkillCommand('frobnicate x')).toThrow(/not a \/skill action/)
     expect(() => parseSkillCommand('install x --scope bogus')).toThrow(/not a valid scope/)
