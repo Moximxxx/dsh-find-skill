@@ -6,7 +6,9 @@ This file defines the versioning rules of dsh-find-skill. **No version change ma
 
 ## 当前版本 / Current version
 
-**0.2.0** — 功能完整版（0.1.x 开发线全部收编）：
+**0.2.1** — 0.2.0 的 bug 修复版：临时技能改为 agent 作用域注册（仅安装会话可见、销毁自动回滚），真实模型隔离验证通过。
+
+历史版本：**0.2.0** — 功能完整版（0.1.x 开发线全部收编）：
 
 - skill_find / skill_install / skill_remove / skill_update 模型工具与自管 provider（临时/项目/全局作用域，隔离根目录）
 - /skill 人类命令：find / install / update / sync / remove / list（安装来源元数据、node_modules 收养）

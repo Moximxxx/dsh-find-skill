@@ -90,7 +90,7 @@ All fields are optional; defaults shown.
 - **Search candidates carry no description**: the skills.sh search API returns id/name/installs/source only; descriptions arrive after install.
 - **Version compatibility**: development and loading tests target npm `@deepseek-ai/*@0.1.0-rc.6`; the source checkout (rc.5) was verified in an isolated instance (probe-confirmed apply execution and healthy boot).
 - **CLI stdout is advisory**: outcomes are judged from the filesystem (the adopted skill directory), never from CLI prose.
-- **Real-session model-driven flow verified** (headless with a real model: skill_find → skill_install temp → skill load); the full loop passed.
+- **Real-session model-driven flow verified** (headless with a real model: skill_find → skill_install temp → skill load); the full loop passed, including **temp-skill session isolation** (visible to the installing agent, invisible to a subagent).
 - **node_modules-synced skills have no remote source**: `update` is unavailable for `/skill sync` adoptions; re-sync or install manually.
 - **Web cards are read-only**: no install/remove buttons yet; labels are fixed English, i18n deferred.
 
