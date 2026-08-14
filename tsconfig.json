@@ -6,7 +6,7 @@
     "lib": ["es2023"],
     "strict": true,
     "declaration": true,
-    "outDir": "lib",
+    "outDir": "lib/types",
     "rootDir": "src",
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
@@ -15,5 +15,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/client"]
 }

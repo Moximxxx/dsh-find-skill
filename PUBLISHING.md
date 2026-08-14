@@ -22,7 +22,7 @@ tar -tzf dsh-find-skill-<version>.tgz   # 确认内容：lib/、README.md、cord
 ### 2. 发布到 npm
 
 ```bash
-npm publish                      # 发布当前 package.json 的 version
+npm publish                      # 发布当前 package.json 的 version（单包双面：host + client 同包）
 npm view dsh-find-skill          # 验证已上线（dist-tags.latest）
 ```
 

@@ -149,3 +149,8 @@
 
 ### P4 版本与发布（完成后询问用户）
 - 新能力 → MINOR 0.3.0；确认后走 npm + main + tag 流程（VERSIONING.md）。
+
+### 包形态合并（2026-08-14 追加）
+
+- ✅ `dsh-find-skill-client` 已合并进 `dsh-find-skill`（dual-face 单包：`./client` 导出 + `dsh.client` 清单 + tsdown 双面构建）。
+- ✅ 3900 验证：单行 overlay 加载、`/plugins/dsh-find-skill/client.js` 200、面板渲染 + 折叠/拖拽 + 零控制台错误（playwright）。

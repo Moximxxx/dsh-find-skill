@@ -6,8 +6,8 @@
     "lib": ["es2023", "dom"],
     "strict": true,
     "declaration": true,
-    "outDir": "lib/types",
-    "rootDir": "src",
+    "outDir": "lib/types/client",
+    "rootDir": "src/client",
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"]
+  "include": ["src/client"]
 }

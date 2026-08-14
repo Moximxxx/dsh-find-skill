@@ -13,8 +13,7 @@ The plugin lets the **LLM decide** when a task needs a skill no existing tool or
 - **`skill_remove`** — remove from temp / project / global; temp is tried first when no scope is given.
 - **`/skill` command** — human-facing `find | install | update | sync | remove | list`; `update` re-fetches the recorded source and replaces the bundle; `sync` scans project `node_modules` skills via the official CLI's `experimental_sync` and adopts them into the managed root.
 - **Lifecycle** — temp skills register through the installing agent's scoped context: **visible only to that session** (other sessions cannot read them), the registration unwinds when the agent/session is disposed, and materialized directories are cleaned on `session/disposed`; `compactDisposePolicy: keep | dispose | ask` controls compaction behavior.
-- **Web UI cards** — the `dsh-find-skill-client` package renders dedicated, replayable, read-only conversation cards for `skill_find` / `skill_install` / `skill_remove` tool calls.
-- **Skill management panel** — a floating, draggable web panel (anchored beside the composer by default): collapsible global/project/temp views; row actions: load into the latest context, per-session disable/enable (project/global), remove (temp).; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
+- **Web UI cards and skill management panel** — **one dual-face package**: this package ships both the host plugin and the browser client (`./client` export plus the `dsh.client` manifest). Conversation cards render `skill_find`/`skill_install`/`skill_remove` tool calls (replayable, read-only); a floating draggable panel (anchored beside the composer by default) offers collapsible global/project/temp views with row actions (load into the latest context, per-session disable/enable, remove temp skills).; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
 
 ## Install / Load
 
