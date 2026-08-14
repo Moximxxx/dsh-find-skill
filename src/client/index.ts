@@ -150,6 +150,7 @@ export interface PanelRow {
   readonly level: 'temp' | 'project' | 'global'
   readonly disabled: boolean
   readonly owner?: string
+  readonly path: string
 }
 
 /** Actions the skill panel face injects per session. */
@@ -236,7 +237,11 @@ function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
   }, [sessionId])
 
   const act = async (line: string) => {
-    setNotice(await run(line))
+    try {
+      setNotice(await run(line))
+    } catch (cause) {
+      setNotice('执行失败: ' + (cause instanceof Error ? cause.message : String(cause)))
+    }
     await refresh()
   }
 
@@ -324,7 +329,7 @@ function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
                       className: css.rowName,
                       title: row.description === '' ? row.name : row.name + '：' + row.description,
                     }, row.name + (row.disabled ? '（已禁用）' : '') + (row.owner !== undefined ? ' @' + row.owner : '')),
-                    createElement('button', { className: css.actionButton, onClick: () => void act(`/skill load ${row.name}`) }, '加载'),
+                    createElement('button', { className: css.actionButton, onClick: () => void act(`/skill load ${row.name} --path ${row.path}`) }, '加载'),
                     row.level === 'temp'
                       ? createElement('button', { className: css.actionButton, onClick: () => void act(`/skill remove ${row.name} --scope temp`) }, '移除')
                       : row.disabled

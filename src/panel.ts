@@ -32,6 +32,8 @@ export interface PanelSkillRow {
   readonly disabled: boolean
   /** Short owning-session id for temp rows (UI and agent sessions differ). */
   readonly owner?: string
+  /** Absolute skill directory (drives path-based load, independent of cwd). */
+  readonly path: string
 }
 
 /** The panel's full listing grouped by level. */
@@ -89,6 +91,7 @@ export async function buildPanelListing(
       level: 'temp',
       disabled: panel.isDisabled(sessionId, entry.name),
       ...entry.owner !== undefined ? { owner: entry.owner.replace(/^session-/, '').slice(0, 8) } : {},
+      path: entry.dir,
     })
   }
   const managedRows = (await provider.list({ cwd })).map(candidate => {
@@ -99,6 +102,7 @@ export async function buildPanelListing(
       description: candidate.description,
       level,
       disabled: panel.isDisabled(sessionId, candidate.name),
+      path: dir,
     }
   })
   return {
@@ -185,32 +189,36 @@ export class SessionSkillPanel {
   }
 
   /**
-   * Load a skill into the agent's latest context (durable injection).
+   * Load a skill into the agent's latest context (durable injection), reading
+   * the skill body directly from its directory so no cwd/scope resolution can
+   * miss it.
    * @param agent - the session's agent receiving the injected content.
-   * @param name - skill name to load.
-   * @returns an error message when the skill cannot be resolved, else undefined.
+   * @param name - skill name for the injected label.
+   * @param dir - absolute skill directory containing SKILL.md.
+   * @returns an error message when the skill cannot be read, else undefined.
    */
-  async load(agent: PanelAgent, name: string): Promise<string | undefined> {
-    const skills = agent.ctx.get('skills') as { get: (n: string, o: unknown) => Promise<SkillDefinition | undefined> } | undefined
-    if (skills === undefined) return 'skills service unavailable for this agent'
-    const skill = await skills.get(name, { cwd: agent.session.header.cwd, scope: agent })
-    if (skill === undefined) return `skill ${name} is unknown or no longer available`
+  async loadFromPath(agent: PanelAgent, name: string, dir: string): Promise<string | undefined> {
     try {
-      agent.inject(createUserMessage({
-        content: [{
-          type: 'text',
-          text: renderSkillContent({
-            name: skill.name,
-            provider: skill.provider,
-            ...skill.resourceBase !== undefined ? { resourceBase: skill.resourceBase } : {},
-            content: skill.content,
-          }),
-        }],
-        source: { kind: 'plugin', plugin: 'dsh-find-skill' },
-      }))
-    } catch (error) {
-      return `failed to inject: ${error instanceof Error ? error.message : String(error)}`
+      const parsed = parseSkillContent(await readFile(join(dir, 'SKILL.md'), 'utf8'), dir)
+      try {
+        agent.inject(createUserMessage({
+          content: [{
+            type: 'text',
+            text: renderSkillContent({
+              name: parsed.name,
+              provider: 'dsh-find-skill',
+              resourceBase: { kind: 'directory', path: dir },
+              content: parsed.content,
+            }),
+          }],
+          source: { kind: 'plugin', plugin: 'dsh-find-skill' },
+        }))
+      } catch (error) {
+        return `failed to inject: ${error instanceof Error ? error.message : String(error)}`
+      }
+      return undefined
+    } catch {
+      return `skill ${name} is unknown or no longer available`
     }
-    return undefined
   }
 }

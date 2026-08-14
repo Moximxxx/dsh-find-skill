@@ -113,8 +113,10 @@ async function handleSkillCommand(
         : { kind: 'error', text: `${parsed.arg} is not disabled in this session` }
     }
     case 'load': {
-      if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill load <name>' }
-      const error = await panel.load(invocation.agent as never, parsed.arg)
+      if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill load <name> --path <dir>' }
+      const path = optionValue(invocation.rawInput.trim().split(/\s+/).filter(Boolean).slice(1), '--path')
+      if (path === undefined) return { kind: 'error', text: 'usage: /skill load <name> --path <dir>' }
+      const error = await panel.loadFromPath(invocation.agent as never, parsed.arg, path)
       return error === undefined
         ? { kind: 'success', text: `loaded ${parsed.arg} into the latest context` }
         : { kind: 'error', text: error }
