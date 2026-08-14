@@ -90,17 +90,30 @@
 | P3 M1 | ✅ | 22 测试 + 真实网络冒烟（search → CLI 安装 temp/project → provider 可见 → remove） |
 | P4 M2 | ✅ | 会话归属追踪 + `session/disposed` 清理 + compact 策略；26 测试 |
 | P5 M3 | ✅ | render 纯函数 + 快照测试 + 命令解析测试（35 测试全绿）+ README（Model Experience / Known Limitations） |
-| P6 M4 | ✅ 准备完成 | peerDependencies 重构、dsh bundle 清单（cordis.patch.yml）、npm pack 25 文件、tarball 装进 web profile 按包名加载验证通过；**发布待用户执行**（npm 未登录） |
+| P6 M4 | ✅ 已完成 | **npm 已发布** `dsh-find-skill@0.1.0`（latest）；隔离实例从 npm 拉取安装验证通过；tag `0.1.0` 已推送；GitHub Release 待网页创建（token 无权限）；README 双语 npm 路径标记为可用 |
 
-### 发布步骤（用户执行）
-```bash
-cd /home/qjy/code/dsh-plugins
-npm login          # 或 pnpm login
-npm publish        # 或 pnpm publish
-# 验证：在任意 dsh 部署执行
-dsh plugin --profile web add dsh-find-skill
-```
+### 发布状态（2026-08-14 更新）
+
+- ✅ npm 已发布：`dsh-find-skill@0.1.0`（latest），`npm view dsh-find-skill` 可查
+- ✅ tag `0.1.0` 已推送到 GitHub（main 分支）
+- ⏳ GitHub Release：token 无 Release 写权限，网页创建：https://github.com/Moximxxx/dsh-find-skill/releases/new → 选 tag `0.1.0`
+- 发布流程详见 `PUBLISHING.md`；版本纪律见 `VERSIONING.md`
 
 ### 测试实例
 - npm 独立 dsh：`http://127.0.0.1:3900`（`/home/qjy/code/dsh-npm-test`，DSH_HOME=/tmp/dsh-test-home，PID 见 /tmp/dsh-3900.pid）
 - 用户 dsh（3080）全程未受影响
+
+
+### 0.1.x 功能迭代状态（2026-08-14 追加）
+
+| 里程碑 | 内容 | 状态 | 验证 |
+|---|---|---|---|
+| 0.1.1 | /skill update（来源元数据 + 替换语义） | ✅ d29ae05 | 39 测试 + 真实网络冒烟含 update |
+| 0.1.2 | compactDisposePolicy ask（会话粒度 dispose） | ✅ ad3fcbe | 45 测试 |
+| 0.1.3 | find 来源信誉排序 | ✅ 6a78cae | 49 测试 |
+| 0.1.4 | /skill sync（experimental_sync 收养） | ✅ 9cae1ad | 52 测试 |
+| 0.1.5 | rc.5 兼容验证 | ✅ cf82007 | 隔离实例探针 + 健康启动 |
+| 0.1.6 | 真实会话模型驱动联调 | ✅ 891274f | headless + 真实模型全流程（find→install temp→skill 加载） |
+| 0.1.7 | Web UI 推荐卡（dsh-find-skill-client） | ✅ 81d6d61 + eb6dfc9 | client.js 200 + boot manifest 收录 + `__ModuleLoader__` 格式修复；**浏览器确认通过** |
+
+**版本纪律**：以上全部在 develop 上完成并推送；版本号仍为 0.1.0（未 bump）；main/npm 未动。版本变更与发布等待用户确认。

@@ -132,6 +132,7 @@ export function registerTools(
           limit,
           args.owner,
           exec.signal,
+          config.prioritySources,
         )
         const installedNames = new Set<string>([
           ...tempManager.list().map(entry => entry.name),

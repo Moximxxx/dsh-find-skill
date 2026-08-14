@@ -6,15 +6,16 @@ This file defines the versioning rules of dsh-find-skill. **No version change ma
 
 ## 当前版本 / Current version
 
-**0.1.0** — 初始可用版（MVP）：
+**0.2.0** — 功能完整版（0.1.x 开发线全部收编）：
 
-- skill_find / skill_install / skill_remove 三个模型工具
-- 自管 provider（临时/项目/全局作用域，隔离根目录）
-- /skill 人类命令
-- 临时技能生命周期（会话结束清理、compact 策略 keep|dispose）
-
-发布状态：**已发布 npm**（latest tag）+ GitHub tag `0.1.0`（见下节）。
+- skill_find / skill_install / skill_remove / skill_update 模型工具与自管 provider（临时/项目/全局作用域，隔离根目录）
+- /skill 人类命令：find / install / update / sync / remove / list（安装来源元数据、node_modules 收养）
+- 临时技能生命周期：会话结束清理 + compact 策略 keep / dispose / ask
+- find 结果来源信誉排序（prioritySources 可配）
+- Web UI 推荐卡（dsh-find-skill-client，只读展示）
 - 双语 README、MIT 许可证、dsh bundle 清单
+
+发布状态：**0.2.0 已发布 npm**（dsh-find-skill + dsh-find-skill-client）+ GitHub tag `0.2.0`。
 
 ## 铁律 / Rules
 

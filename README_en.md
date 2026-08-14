@@ -11,8 +11,9 @@ The plugin lets the **LLM decide** when a task needs a skill no existing tool or
 - **`skill_find`** — remote search over the official skills.sh API (the same source the CLI `find` command queries). Candidates carry install counts, sources, browse URLs, and a local "installed" marker. Low-priority description: the model is told to use it only when no existing tool or loaded skill fits.
 - **`skill_install`** — fetch through the official CLI (`npx -y skills@latest`, auto-latest per project decision) inside an isolated throwaway work/home pair, then adopt only the requested skill into a managed scope. Temp installs register as runtime skills; project/global installs are written to managed roots and exposed through a self-owned `ctx.skills` provider (rank 350, configurable).
 - **`skill_remove`** — remove from temp / project / global; temp is tried first when no scope is given.
-- **`/skill` command** — human-facing `find | install | remove | list` for users who prefer commands over model-driven flows.
-- **Lifecycle** — temp skills are owned by the installing session and disposed on `session/disposed`; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
+- **`/skill` command** — human-facing `find | install | update | sync | remove | list`; `update` re-fetches the recorded source and replaces the bundle; `sync` scans project `node_modules` skills via the official CLI's `experimental_sync` and adopts them into the managed root.
+- **Lifecycle** — temp skills are owned by the installing session and disposed on `session/disposed`; `compactDisposePolicy: keep | dispose | ask` controls compaction behavior.
+- **Web UI cards** — the `dsh-find-skill-client` package renders dedicated, replayable, read-only conversation cards for `skill_find` / `skill_install` / `skill_remove` tool calls.; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
 
 ## Install / Load
 
@@ -58,13 +59,14 @@ All fields are optional; defaults shown.
 |---|---|---|
 | `searchApiBase` | `https://skills.sh` | Search API base (same source as CLI `find`). |
 | `searchLimit` | `20` | Max candidates per search. |
+| `prioritySources` | official list | Source owners boosted to the front of search results (priority first, then install count). |
 | `cliCommand` | `npx -y skills@latest` | Command running the official CLI; swap in a local binary path if desired. |
 | `installDefaultScope` | `temp` | Scope used when the model omits `scope`. |
 | `projectSkillRoot` | `.dsh/skills-bridge` | Project-managed root, relative to the git root. |
 | `globalSkillRoot` | `<dshHome>/skills-bridge/global` | User-global managed root. |
 | `tempSkillRoot` | `<dshHome>/skills-bridge/tmp` | Temp materialization root. |
 | `providerRank` | `350` | Rank of provider candidates (lower wins duplicates). |
-| `compactDisposePolicy` | `keep` | `keep` or `dispose` temporary skills at compaction. |
+| `compactDisposePolicy` | `keep` | `keep` / `dispose` / `ask` for temporary skills at compaction. |
 | `registerFindTool` / `registerInstallTool` / `registerRemoveTool` | `true` | Model tool switches. |
 | `registerCommand` | `true` | `/skill` command switch (looked up opportunistically). |
 
@@ -85,12 +87,12 @@ All fields are optional; defaults shown.
 
 ## Known Limitations and Deferred Work
 
-- **`compactDisposePolicy: 'ask'`** is deferred; only `keep` and `dispose` are implemented.
-- **No update command**: re-installing a skill replaces it; a dedicated `update` action is future work.
 - **Search candidates carry no description**: the skills.sh search API returns id/name/installs/source only; descriptions arrive after install.
-- **Real-session model-driven verification** (find → ask_user_question → install → skill load) requires model credentials and was not executed in this environment; unit/snapshot tests and the network smoke cover the plugin side, and the catalog/skill-tool path is native dsh behavior.
-- **Version skew**: development and loading tests target npm `@deepseek-ai/*@0.1.0-rc.6`; the local source checkout (rc.5) was not re-verified.
+- **Version compatibility**: development and loading tests target npm `@deepseek-ai/*@0.1.0-rc.6`; the source checkout (rc.5) was verified in an isolated instance (probe-confirmed apply execution and healthy boot).
 - **CLI stdout is advisory**: outcomes are judged from the filesystem (the adopted skill directory), never from CLI prose.
+- **Real-session model-driven flow verified** (headless with a real model: skill_find → skill_install temp → skill load); the full loop passed.
+- **node_modules-synced skills have no remote source**: `update` is unavailable for `/skill sync` adoptions; re-sync or install manually.
+- **Web cards are read-only**: no install/remove buttons yet; labels are fixed English, i18n deferred.
 
 ## License
 

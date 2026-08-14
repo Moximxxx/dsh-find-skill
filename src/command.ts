@@ -14,7 +14,7 @@ import type { Config, InstallScope } from './config.ts'
 import type { ManagedSkillProvider } from './provider.ts'
 import type { TempSkillManager } from './temp.ts'
 import { searchSkills } from './search.ts'
-import { installSkill, removeSkill } from './install.ts'
+import { installSkill, removeSkill, syncSkills, updateSkill } from './install.ts'
 
 /**
  * Register the /skill human command when the commands service is present.
@@ -33,8 +33,8 @@ export function registerCommand(
   if (commands === undefined) return
   commands.register({
     name: 'skill',
-    description: 'Manage agent skills from the skills.sh ecosystem: find / install / remove / list.',
-    input: { hint: 'find <query> | install <source> [--skill name] [--scope temp|project|global] | remove <name> [--scope ...] | list' },
+    description: 'Manage agent skills from the skills.sh ecosystem: find / install / update / sync / remove / list.',
+    input: { hint: 'find <query> | install <source> [--skill name] [--scope temp|project|global] | update <name> [--scope ...] | sync | remove <name> [--scope ...] | list' },
     handler: async (invocation: CommandInvocation): Promise<CommandResult> => {
       try {
         return await handleSkillCommand(ctx, invocation, config, provider, tempManager)
@@ -61,6 +61,9 @@ async function handleSkillCommand(
         config.searchApiBase ?? 'https://skills.sh',
         parsed.arg,
         config.searchLimit ?? 20,
+        undefined,
+        undefined,
+        config.prioritySources,
       )
       if (candidates.length === 0) return { kind: 'success', text: 'no skills matched on skills.sh' }
       return {
@@ -77,6 +80,18 @@ async function handleSkillCommand(
         kind: 'success',
         text: `${result.name} installed (${result.scope}) at ${result.path}`,
       }
+    }
+    case 'update': {
+      if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill update <name> [--scope temp|project|global]' }
+      const result = await updateSkill(ctx, config, provider, tempManager, parsed.scope, parsed.arg, cwd)
+      return { kind: 'success', text: `${result.name} updated (${result.scope})` }
+    }
+    case 'sync': {
+      const result = await syncSkills(config, provider, cwd)
+      const summary = result.synced.length === 0
+        ? 'no new node_modules skills found'
+        : result.synced.map(item => item.name).join(', ')
+      return { kind: 'success', text: 'synced: ' + summary }
     }
     case 'remove': {
       if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill remove <name> [--scope temp|project|global]' }
@@ -107,7 +122,7 @@ async function handleSkillCommand(
 /** Parsed /skill command line. */
 export interface ParsedSkillCommand {
   /** Action to perform. */
-  readonly action: 'find' | 'install' | 'remove' | 'list'
+  readonly action: 'find' | 'install' | 'update' | 'sync' | 'remove' | 'list'
   /** Positional argument (query, source, or name). */
   readonly arg?: string
   /** --skill option value. */
@@ -124,8 +139,8 @@ export interface ParsedSkillCommand {
 export function parseSkillCommand(rawInput: string): ParsedSkillCommand {
   const tokens = rawInput.trim().split(/\s+/).filter(Boolean)
   const action = tokens[0] ?? 'list'
-  if (action !== 'find' && action !== 'install' && action !== 'remove' && action !== 'list') {
-    throw new Error(`${action} is not a /skill action (find | install | remove | list)`)
+  if (action !== 'find' && action !== 'install' && action !== 'update' && action !== 'sync' && action !== 'remove' && action !== 'list') {
+    throw new Error(`${action} is not a /skill action (find | install | update | sync | remove | list)`)
   }
   const rest = tokens.slice(1)
   const positional = rest.find(token => !token.startsWith('--'))
