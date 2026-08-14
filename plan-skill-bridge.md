@@ -114,6 +114,6 @@
 | 0.1.4 | /skill sync（experimental_sync 收养） | ✅ 9cae1ad | 52 测试 |
 | 0.1.5 | rc.5 兼容验证 | ✅ cf82007 | 隔离实例探针 + 健康启动 |
 | 0.1.6 | 真实会话模型驱动联调 | ✅ 891274f | headless + 真实模型全流程（find→install temp→skill 加载） |
-| 0.1.7 | Web UI 推荐卡（dsh-find-skill-client） | ✅ 81d6d61 | client.js 200 + boot manifest 收录；视觉待用户浏览器确认 |
+| 0.1.7 | Web UI 推荐卡（dsh-find-skill-client） | ✅ 81d6d61 + eb6dfc9 | client.js 200 + boot manifest 收录 + `__ModuleLoader__` 格式修复；**浏览器确认通过** |
 
 **版本纪律**：以上全部在 develop 上完成并推送；版本号仍为 0.1.0（未 bump）；main/npm 未动。版本变更与发布等待用户确认。
