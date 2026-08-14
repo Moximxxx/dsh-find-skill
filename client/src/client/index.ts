@@ -5,7 +5,14 @@
  * @module dsh-find-skill-client/client
  */
 
-import { createElement, useEffect, useState } from 'react'
+import { createElement, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  IconChevronDownOutline14,
+  IconChevronRightOutline14,
+  IconChevronUpOutline14,
+  IconRefreshOutline14,
+} from '@deepseek-ai/dsh-client-ui-primitives'
+import css from './SkillPanel.module.css'
 import type { CSSProperties as ReactCSSProperties } from 'react'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const React = { CSSProperties: undefined }
@@ -146,7 +153,9 @@ export interface PanelRow {
 
 /** Actions the skill panel face injects per session. */
 export interface SkillPanelActions {
-  /** Refresh the listing from the host. */
+  /** Owning session id (refresh key). */
+  readonly sessionId: string
+  /** Refresh the listing from the host; rejects with a message on failure. */
   list(): Promise<PanelRow[]>
   /** Run one /skill command line and return its result text. */
   run(line: string): Promise<string>
@@ -163,55 +172,154 @@ function flattenListing(raw: string): PanelRow[] {
       ...(parsed.levels?.global ?? []),
     ]
   } catch {
-    return []
+    throw new Error('无法解析面板数据: ' + raw.slice(0, 200))
   }
 }
 
-function rowLabel(row: PanelRow): string {
-  const levelLabel = row.level === 'temp' ? '临时' : row.level === 'project' ? '项目' : '全局'
-  return levelLabel + ' · ' + row.name + (row.disabled ? '（已禁用）' : '')
+const LEVEL_LABELS: Record<PanelRow['level'], string> = { global: '全局', project: '项目', temp: '临时' }
+const POSITION_KEY = 'dsh-find-skill.panel.position'
+
+interface PanelPosition { readonly left: number; readonly bottom: number }
+
+function readPosition(): PanelPosition | undefined {
+  try {
+    const raw = localStorage.getItem(POSITION_KEY)
+    if (raw === null) return undefined
+    const parsed = JSON.parse(raw) as { left?: unknown; bottom?: unknown }
+    if (typeof parsed.left === 'number' && typeof parsed.bottom === 'number') {
+      return { left: parsed.left, bottom: parsed.bottom }
+    }
+  } catch {
+    // Corrupt saved position falls back to the anchored default.
+  }
+  return undefined
 }
 
-const btnStyle: ReactCSSProperties = {
-  fontSize: 12,
-  padding: '2px 8px',
-  cursor: 'pointer',
-  borderRadius: 4,
-  border: '1px solid rgba(128,128,128,0.4)',
-  background: 'transparent',
-}
-
-function SkillPanelView({ list, run }: SkillPanelActions) {
+function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
   const [rows, setRows] = useState<PanelRow[]>([])
+  const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
+  const [collapsed, setCollapsed] = useState<Record<PanelRow['level'], boolean>>({ global: false, project: false, temp: false })
+  const [position, setPosition] = useState<PanelPosition | undefined>(undefined)
+  const rootRef = useRef<HTMLDivElement | null>(null)
+
+  // Anchor: default position hugs the composer's left edge; a saved drag position wins.
+  useLayoutEffect(() => {
+    const saved = readPosition()
+    if (saved !== undefined) {
+      setPosition(saved)
+      return
+    }
+    const element = rootRef.current
+    if (element === null) return
+    const rect = element.getBoundingClientRect()
+    setPosition({ left: rect.left, bottom: window.innerHeight - rect.bottom })
+  }, [])
+
   const refresh = async () => {
     setLoading(true)
-    setRows(await list())
+    setError('')
+    try {
+      setRows(await list())
+    } catch (cause) {
+      setRows([])
+      setError(cause instanceof Error ? cause.message : String(cause))
+    }
     setLoading(false)
   }
-  useEffect(() => { void refresh() }, [])
+  useEffect(() => { void refresh() }, [sessionId])
+
   const act = async (line: string) => {
     setNotice(await run(line))
     await refresh()
   }
-  return createElement('div', { style: { padding: '8px 12px', fontSize: 13, borderBottom: '1px solid rgba(128,128,128,0.2)' } },
-    createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
-      createElement('strong', null, '技能面板'),
-      createElement('button', { onClick: () => void refresh(), style: btnStyle }, '刷新'),
+
+  const startDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const target = event.currentTarget
+    target.setPointerCapture(event.pointerId)
+    const origin = readPosition() ?? { left: 0, bottom: 0 }
+    const startX = event.clientX
+    const startY = event.clientY
+    const baseLeft = origin.left
+    const baseBottom = origin.bottom
+    const move = (moveEvent: PointerEvent) => {
+      const left = Math.max(0, baseLeft + moveEvent.clientX - startX)
+      const bottom = Math.max(0, baseBottom - (moveEvent.clientY - startY))
+      setPosition({ left, bottom })
+    }
+    const up = (upEvent: PointerEvent) => {
+      target.removeEventListener('pointermove', move)
+      target.removeEventListener('pointerup', up)
+      const left = Math.max(0, baseLeft + upEvent.clientX - startX)
+      const bottom = Math.max(0, baseBottom - (upEvent.clientY - startY))
+      try { localStorage.setItem(POSITION_KEY, JSON.stringify({ left, bottom })) } catch { /* storage unavailable */ }
+    }
+    target.addEventListener('pointermove', move)
+    target.addEventListener('pointerup', up)
+  }
+
+  const toggleLevel = (level: PanelRow['level']) => {
+    setCollapsed(previous => ({ ...previous, [level]: !previous[level] }))
+  }
+  const allCollapsed = Object.values(collapsed).every(value => value)
+
+  return createElement('div', {
+    ref: rootRef,
+    className: css.panel,
+    style: position === undefined
+      ? { visibility: 'hidden' }
+      : { left: position.left, bottom: position.bottom },
+  },
+    createElement('div', { className: css.titlebar, onPointerDown: startDrag },
+      createElement('strong', { className: css.title }, '技能面板'),
+      createElement('button', {
+        className: css.iconButton,
+        title: allCollapsed ? '全部展开' : '全部折叠',
+        onClick: () => setCollapsed({ global: allCollapsed, project: allCollapsed, temp: allCollapsed }),
+      }, createElement(allCollapsed ? IconChevronDownOutline14 : IconChevronUpOutline14)),
+      createElement('button', {
+        className: css.iconButton,
+        title: '刷新',
+        onClick: () => void refresh(),
+      }, createElement(IconRefreshOutline14)),
     ),
-    loading ? createElement('div', null, '加载中…') : rows.length === 0
-      ? createElement('div', { style: { opacity: 0.6 } }, '暂无技能')
-      : rows.map(row => createElement('div', { key: row.name, style: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 } },
-          createElement('span', { style: { flex: 1 } }, rowLabel(row)),
-          createElement('button', { onClick: () => void act(`/skill load ${row.name}`), style: btnStyle }, '加载'),
-          row.level === 'temp'
-            ? createElement('button', { onClick: () => void act(`/skill remove ${row.name} --scope temp`), style: btnStyle }, '移除')
-            : row.disabled
-              ? createElement('button', { onClick: () => void act(`/skill enable ${row.name}`), style: btnStyle }, '启用')
-              : createElement('button', { onClick: () => void act(`/skill disable ${row.name}`), style: btnStyle }, '禁用'),
-        )),
-    notice === '' ? null : createElement('div', { style: { marginTop: 4, opacity: 0.7 } }, notice),
+    loading
+      ? createElement('div', { className: css.stateLine }, '加载中…')
+      : error !== ''
+        ? createElement('div', { className: css.stateLine },
+            createElement('div', { className: css.errorText }, '加载失败: ' + error),
+            createElement('button', { className: css.actionButton, onClick: () => void refresh() }, '重试'),
+          )
+        : ['global', 'project', 'temp'].map(level => {
+            const levelRows = rows.filter(row => row.level === level)
+            const levelCollapsed = collapsed[level as PanelRow['level']]
+            return createElement('section', { key: level, className: css.section },
+              createElement('button', {
+                className: css.sectionHeader,
+                onClick: () => toggleLevel(level as PanelRow['level']),
+              },
+                createElement(levelCollapsed ? IconChevronRightOutline14 : IconChevronDownOutline14),
+                createElement('span', null, LEVEL_LABELS[level as PanelRow['level']] + '技能'),
+                createElement('span', { className: css.count }, String(levelRows.length)),
+              ),
+              levelCollapsed ? null : levelRows.length === 0
+                ? createElement('div', { className: css.emptyLine }, '暂无')
+                : levelRows.map(row => createElement('div', { key: row.name, className: css.row },
+                    createElement('span', {
+                      className: css.rowName,
+                      title: row.description === '' ? row.name : row.name + '：' + row.description,
+                    }, row.name + (row.disabled ? '（已禁用）' : '')),
+                    createElement('button', { className: css.actionButton, onClick: () => void act(`/skill load ${row.name}`) }, '加载'),
+                    row.level === 'temp'
+                      ? createElement('button', { className: css.actionButton, onClick: () => void act(`/skill remove ${row.name} --scope temp`) }, '移除')
+                      : row.disabled
+                        ? createElement('button', { className: css.actionButton, onClick: () => void act(`/skill enable ${row.name}`) }, '启用')
+                        : createElement('button', { className: css.actionButton, onClick: () => void act(`/skill disable ${row.name}`) }, '禁用'),
+                  )),
+            )
+          }),
+    notice === '' ? null : createElement('div', { className: css.stateLine }, notice),
   )
 }
 
@@ -219,14 +327,17 @@ function registerSkillPanel(ctx: ClientContext): void {
   const runCommand = async (sessionId: SessionId, line: string): Promise<string> => {
     const result = await ctx.remote.commands.execute(sessionId, line)
     if (!result.ok) {
+      const code = 'code' in result.error ? String(result.error.code) : 'unknown'
       const detail = result.error.message ?? 'unknown'
-      return '执行失败: ' + String(detail)
+      throw new Error(code + ': ' + String(detail))
     }
     const text = result.value?.result?.text
     return text === undefined ? '(无输出)' : text
   }
-  const listFor = async (sessionId: SessionId): Promise<PanelRow[]> =>
-    flattenListing(await runCommand(sessionId, '/skill panel'))
+  const listFor = async (sessionId: SessionId): Promise<PanelRow[]> => {
+    const raw = await runCommand(sessionId, '/skill panel')
+    return flattenListing(raw)
+  }
 
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock',
@@ -234,6 +345,7 @@ function registerSkillPanel(ctx: ClientContext): void {
     order: 20,
     locale: 'conversation',
     inject: (sessionId): SkillPanelActions => ({
+      sessionId: String(sessionId),
       list: () => listFor(sessionId),
       run: (line) => runCommand(sessionId, line),
     }),

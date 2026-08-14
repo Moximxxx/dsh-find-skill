@@ -9,6 +9,13 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { SkillDefinition, SkillRegistration } from '@deepseek-ai/dsh-skill'
 import { renderSkillContent } from '@deepseek-ai/dsh-skill'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { dirname, join } from 'node:path'
+import { readFile } from 'node:fs/promises'
+import type { Config } from './config.ts'
+import type { ManagedSkillProvider } from './provider.ts'
+import type { TempSkillManager } from './temp.ts'
+import { resolveRoots } from './roots.ts'
+import { parseSkillContent } from './frontmatter.ts'
 
 /** Structural agent view used by panel operations. */
 export interface PanelAgent {
@@ -40,6 +47,63 @@ export interface PanelListing {
  * flags off, which win over global-layer provider candidates for the owning
  * agent only; disposing the shadow re-enables the skill for that session.
  */
+/**
+ * Build the panel listing for one session: temp rows scoped to that session,
+ * plus project/global managed rows with disable state.
+ * @param config - validated plugin configuration.
+ * @param provider - managed provider for project/global rows.
+ * @param tempManager - temporary skill lifecycle manager.
+ * @param panel - panel manager for disable state.
+ * @param cwd - workspace selector for managed roots.
+ * @param sessionId - the viewing session; temp rows are filtered to its owner.
+ * @returns the three-level listing.
+ */
+export async function buildPanelListing(
+  config: Config,
+  provider: ManagedSkillProvider,
+  tempManager: TempSkillManager,
+  panel: SessionSkillPanel,
+  cwd: string | undefined,
+  sessionId: string,
+): Promise<PanelListing> {
+  const roots = resolveRoots(config, cwd)
+  const tempRows: PanelSkillRow[] = []
+  for (const entry of tempManager.list()) {
+    // Temp skills are agent-scoped: only show rows owned by the viewing session.
+    if (entry.owner !== undefined && entry.owner !== sessionId) continue
+    let description = ''
+    try {
+      const parsed = parseSkillContent(await readFile(join(entry.dir, 'SKILL.md'), 'utf8'), entry.dir)
+      description = parsed.description
+    } catch {
+      // Missing or invalid SKILL.md still renders the row without a description.
+    }
+    tempRows.push({
+      name: entry.name,
+      description,
+      level: 'temp',
+      disabled: panel.isDisabled(sessionId, entry.name),
+    })
+  }
+  const managedRows = (await provider.list({ cwd })).map(candidate => {
+    const dir = dirname(candidate.path ?? '')
+    const level: 'project' | 'global' = dir.startsWith(roots.projectSkillDir) ? 'project' : 'global'
+    return {
+      name: candidate.name,
+      description: candidate.description,
+      level,
+      disabled: panel.isDisabled(sessionId, candidate.name),
+    }
+  })
+  return {
+    levels: {
+      temp: tempRows,
+      project: managedRows.filter(row => row.level === 'project'),
+      global: managedRows.filter(row => row.level === 'global'),
+    },
+  }
+}
+
 export class SessionSkillPanel {
   /** session id -> skill name -> shadow disposer. */
   private readonly disabled = new Map<string, Map<string, () => void>>()

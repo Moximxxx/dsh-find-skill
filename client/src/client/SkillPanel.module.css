@@ -1,0 +1,111 @@
+/* Floating skill management panel, neutral to both dsh color themes. */
+.panel {
+  position: fixed;
+  z-index: 60;
+  width: 280px;
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--color-bg-elevated, rgba(32, 34, 40, 0.96));
+  border: 1px solid var(--color-border, rgba(140, 146, 160, 0.25));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: var(--color-text-primary, #e6e8ee);
+  font-size: 13px;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  cursor: grab;
+  user-select: none;
+  border-radius: 6px;
+}
+
+.titlebar:active { cursor: grabbing; }
+
+.title { flex: 1; font-size: 13px; }
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.iconButton:hover { background: var(--color-bg-hover, rgba(140, 146, 160, 0.16)); }
+
+.section { display: flex; flex-direction: column; gap: 2px; }
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sectionHeader:hover { background: var(--color-bg-hover, rgba(140, 146, 160, 0.12)); }
+
+.count {
+  margin-left: auto;
+  opacity: 0.6;
+  font-weight: 400;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 20px;
+}
+
+.rowName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actionButton {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--color-border, rgba(140, 146, 160, 0.3));
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.actionButton:hover { background: var(--color-bg-hover, rgba(140, 146, 160, 0.16)); }
+
+.stateLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  opacity: 0.8;
+}
+
+.errorText { flex: 1; color: #e5484d; }
+
+.emptyLine { padding: 2px 6px 2px 20px; opacity: 0.5; }

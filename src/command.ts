@@ -16,9 +16,7 @@ import type { TempSkillManager } from './temp.ts'
 import { searchSkills } from './search.ts'
 import { installSkill, removeSkill, syncSkills, updateSkill, type RegisterSkill } from './install.ts'
 import type { SkillRegistration } from '@deepseek-ai/dsh-skill'
-import type { SessionSkillPanel } from './panel.ts'
-import { resolveRoots } from './roots.ts'
-import { dirname } from 'node:path'
+import { buildPanelListing, type SessionSkillPanel } from './panel.ts'
 
 /**
  * Register the /skill human command when the commands service is present.
@@ -96,24 +94,8 @@ async function handleSkillCommand(
     }
     case 'panel': {
       const sessionId = String(invocation.agent.session.header.id)
-      const roots = resolveRoots(config, cwd)
-      const tempRows = tempManager.list().map(entry => ({
-        name: entry.name,
-        description: '',
-        level: 'temp',
-        disabled: panel.isDisabled(sessionId, entry.name),
-      }))
-      const managedRows = (await provider.list({ cwd })).map(candidate => {
-        const dir = dirname(candidate.path ?? '')
-        const level = dir.startsWith(roots.projectSkillDir) ? 'project' : 'global'
-        return {
-          name: candidate.name,
-          description: candidate.description,
-          level,
-          disabled: panel.isDisabled(sessionId, candidate.name),
-        }
-      })
-      return { kind: 'success', text: JSON.stringify({ levels: { temp: tempRows, project: managedRows.filter(row => row.level === 'project'), global: managedRows.filter(row => row.level === 'global') } }) }
+      const listing = await buildPanelListing(config, provider, tempManager, panel, cwd, sessionId)
+      return { kind: 'success', text: JSON.stringify(listing) }
     }
     case 'disable': {
       if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill disable <name>' }
