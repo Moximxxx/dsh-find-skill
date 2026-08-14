@@ -4,14 +4,14 @@
   "version": "0.1.0",
   "type": "module",
   "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "types": "lib/types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
+      "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
     "./client": {
-      "types": "./lib/client.d.ts",
+      "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
     "./src/*": "./src/*",
@@ -39,11 +39,13 @@
     "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
     "@deepseek-ai/dsh-client-ui-conversation": "0.1.0-rc.6",
     "@types/react": "^19.0.0",
+    "lightningcss": "^1.32.0",
+    "tsdown": "^0.22.2",
     "typescript": "^5.9.0",
     "vitest": "^4.0.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsdown --env.DSH_BUILD_FACE client",
     "test": "vitest run"
   }
 }

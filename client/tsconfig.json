@@ -6,7 +6,7 @@
     "lib": ["es2023", "dom"],
     "strict": true,
     "declaration": true,
-    "outDir": "lib",
+    "outDir": "lib/types",
     "rootDir": "src",
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
