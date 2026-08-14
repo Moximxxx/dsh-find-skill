@@ -14,6 +14,7 @@
 - **`/skill` 命令** —— 面向人的 `find | install | update | sync | remove | list` 子命令；`update` 按安装时记录的来源重新拉取并替换；`sync` 通过官方 CLI 的 `experimental_sync` 扫描项目 `node_modules` 中声明的技能并收养进托管根。
 - **生命周期** —— 临时技能通过安装它的 agent 的作用域上下文注册：**仅安装它的会话可见**（其他会话读取不到），agent/会话销毁时注册自动回滚、物化目录随 `session/disposed` 清理；`compactDisposePolicy: keep | dispose | ask` 控制压缩（compact）时的行为。
 - **Web UI 卡片** —— `dsh-find-skill-client` 客户端包为 `skill_find` / `skill_install` / `skill_remove` 工具调用渲染专用会话卡片（可重放、只读展示）。
+- **技能管理面板** —— 悬浮可拖动的 Web 面板（默认锚定输入框左侧）：全局/项目/临时三级可折叠视图；行操作：加载到最新上下文、本次会话禁用/启用（项目、全局）、移除（临时）。
 
 ## 安装 / 加载
 
@@ -92,7 +93,7 @@ dsh plugin --profile web add dsh-find-skill
 - **CLI stdout 仅供参考**：结果以文件系统为准（收养的技能目录），从不依赖 CLI 散文输出。
 - **真实会话模型驱动流程已验证**（headless + 真实模型：skill_find → skill_install temp → skill 加载），完整闭环通过；**临时技能会话隔离已验证**（主代理可见、子代理不可见）。
 - **node_modules 同步的技能无远程来源**：`/skill sync` 收养的技能 `update` 不可用（无 provenance source），需重新 sync 或手动安装。
-- **Web 卡片为只读展示**：暂无安装/移除按钮交互；标签固定英文，i18n 留待后续。
+- **面板文案固定中文**：技能面板与卡片标签暂未接入 i18n；拖拽位置存于浏览器 localStorage。
 
 ## 许可证
 

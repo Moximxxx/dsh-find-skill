@@ -13,7 +13,8 @@ The plugin lets the **LLM decide** when a task needs a skill no existing tool or
 - **`skill_remove`** — remove from temp / project / global; temp is tried first when no scope is given.
 - **`/skill` command** — human-facing `find | install | update | sync | remove | list`; `update` re-fetches the recorded source and replaces the bundle; `sync` scans project `node_modules` skills via the official CLI's `experimental_sync` and adopts them into the managed root.
 - **Lifecycle** — temp skills register through the installing agent's scoped context: **visible only to that session** (other sessions cannot read them), the registration unwinds when the agent/session is disposed, and materialized directories are cleaned on `session/disposed`; `compactDisposePolicy: keep | dispose | ask` controls compaction behavior.
-- **Web UI cards** — the `dsh-find-skill-client` package renders dedicated, replayable, read-only conversation cards for `skill_find` / `skill_install` / `skill_remove` tool calls.; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
+- **Web UI cards** — the `dsh-find-skill-client` package renders dedicated, replayable, read-only conversation cards for `skill_find` / `skill_install` / `skill_remove` tool calls.
+- **Skill management panel** — a floating, draggable web panel (anchored beside the composer by default): collapsible global/project/temp views; row actions: load into the latest context, per-session disable/enable (project/global), remove (temp).; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
 
 ## Install / Load
 
@@ -92,7 +93,7 @@ All fields are optional; defaults shown.
 - **CLI stdout is advisory**: outcomes are judged from the filesystem (the adopted skill directory), never from CLI prose.
 - **Real-session model-driven flow verified** (headless with a real model: skill_find → skill_install temp → skill load); the full loop passed, including **temp-skill session isolation** (visible to the installing agent, invisible to a subagent).
 - **node_modules-synced skills have no remote source**: `update` is unavailable for `/skill sync` adoptions; re-sync or install manually.
-- **Web cards are read-only**: no install/remove buttons yet; labels are fixed English, i18n deferred.
+- **Panel labels are fixed Chinese**: the panel and card labels are not i18n-wired yet; the drag position is stored in browser localStorage.
 
 ## License
 
