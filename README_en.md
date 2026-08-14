@@ -12,7 +12,7 @@ The plugin lets the **LLM decide** when a task needs a skill no existing tool or
 - **`skill_install`** — fetch through the official CLI (`npx -y skills@latest`, auto-latest per project decision) inside an isolated throwaway work/home pair, then adopt only the requested skill into a managed scope. Temp installs register as runtime skills; project/global installs are written to managed roots and exposed through a self-owned `ctx.skills` provider (rank 350, configurable).
 - **`skill_remove`** — remove from temp / project / global; temp is tried first when no scope is given.
 - **`/skill` command** — human-facing `find | install | update | sync | remove | list`; `update` re-fetches the recorded source and replaces the bundle; `sync` scans project `node_modules` skills via the official CLI's `experimental_sync` and adopts them into the managed root.
-- **Lifecycle** — temp skills are owned by the installing session and disposed on `session/disposed`; `compactDisposePolicy: keep | dispose | ask` controls compaction behavior.
+- **Lifecycle** — temp skills register through the installing agent's scoped context: **visible only to that session** (other sessions cannot read them), the registration unwinds when the agent/session is disposed, and materialized directories are cleaned on `session/disposed`; `compactDisposePolicy: keep | dispose | ask` controls compaction behavior.
 - **Web UI cards** — the `dsh-find-skill-client` package renders dedicated, replayable, read-only conversation cards for `skill_find` / `skill_install` / `skill_remove` tool calls.; `compactDisposePolicy: keep | dispose` controls behavior at compaction.
 
 ## Install / Load

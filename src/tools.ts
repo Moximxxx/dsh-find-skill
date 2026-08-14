@@ -13,7 +13,8 @@ import type { Config, InstallScope } from './config.ts'
 import type { ManagedSkillProvider } from './provider.ts'
 import type { TempSkillManager } from './temp.ts'
 import { searchSkills } from './search.ts'
-import { installSkill, removeSkill } from './install.ts'
+import { installSkill, removeSkill, type RegisterSkill } from './install.ts'
+import type { SkillRegistration } from '@deepseek-ai/dsh-skill'
 
 const FIND_DESCRIPTION = 'Search the open agent-skills ecosystem (skills.sh) for installable skills. '
   + 'Use ONLY when no existing tool and no already-loaded skill can handle the user request. '
@@ -194,7 +195,7 @@ export function registerTools(
         const scope = parseScope(args.scope)
         const agent = exec.agent
         return installSkill(
-          ctx,
+          agentRegister(agent, ctx),
           config,
           provider,
           tempManager,
@@ -244,6 +245,19 @@ export function registerTools(
       },
     }))
   }
+}
+
+/**
+ * Build the temp registration function for one tool call: agent-scoped when an
+ * agent drives the call (agent-local visibility, auto-unwind on disposal),
+ * host-scoped otherwise.
+ * @param agent - the executing agent, when any.
+ * @param ctx - the plugin host context.
+ * @returns a registration function suitable for temp scope.
+ */
+function agentRegister(agent: { ctx: { skills: { register: (skill: SkillRegistration) => () => void } } } | undefined, ctx: Context): RegisterSkill {
+  if (agent !== undefined) return (skill) => agent.ctx.skills.register(skill)
+  return (skill) => ctx.skills.register(skill)
 }
 
 function parseScope(value: string | undefined): InstallScope | undefined {

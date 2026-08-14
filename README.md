@@ -12,7 +12,7 @@
 - **`skill_install`** —— 通过官方 CLI（`npx -y skills@latest`，按项目决策自动取最新版）在隔离的一次性 work/home 环境内抓取，只收养目标技能目录到托管作用域。临时安装注册为运行时技能；项目/全局安装写入托管根目录，并通过自有的 `ctx.skills` provider 暴露（rank 350，可配置）。
 - **`skill_remove`** —— 从临时/项目/全局移除；未指定作用域时按 临时→项目→全局 顺序尝试。
 - **`/skill` 命令** —— 面向人的 `find | install | update | sync | remove | list` 子命令；`update` 按安装时记录的来源重新拉取并替换；`sync` 通过官方 CLI 的 `experimental_sync` 扫描项目 `node_modules` 中声明的技能并收养进托管根。
-- **生命周期** —— 临时技能归属于安装它的会话，会话结束时（`session/disposed`）自动清理；`compactDisposePolicy: keep | dispose | ask` 控制压缩（compact）时的行为。
+- **生命周期** —— 临时技能通过安装它的 agent 的作用域上下文注册：**仅安装它的会话可见**（其他会话读取不到），agent/会话销毁时注册自动回滚、物化目录随 `session/disposed` 清理；`compactDisposePolicy: keep | dispose | ask` 控制压缩（compact）时的行为。
 - **Web UI 卡片** —— `dsh-find-skill-client` 客户端包为 `skill_find` / `skill_install` / `skill_remove` 工具调用渲染专用会话卡片（可重放、只读展示）。
 
 ## 安装 / 加载

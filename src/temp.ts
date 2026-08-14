@@ -44,14 +44,17 @@ export class TempSkillManager {
    * @param skill - the skill definition to register; provider defaults to runtime.
    * @param dir - absolute materialized directory (resource base for the skill).
    * @param owner - owning session id; skills owned by a session are disposed when it ends.
+   * @param register - per-add registration function; defaults to the manager's.
+   *   Callers pass the owning agent's scoped context register so the skill is
+   *   visible only to that agent's sessions and unwinds with the agent.
    * @returns the new tracked entry.
    */
-  async add(skill: SkillRegistration, dir: string, owner?: string): Promise<TempSkillEntry> {
+  async add(skill: SkillRegistration, dir: string, owner?: string, register?: (skill: SkillRegistration) => () => void): Promise<TempSkillEntry> {
     await mkdir(dir, { recursive: true })
     if (this.entries.has(skill.name)) {
       this.disposeOne(skill.name)
     }
-    const disposer = this.register({
+    const disposer = (register ?? this.register)({
       ...skill,
       source: 'custom',
       resourceBase: { kind: 'directory', path: dir },
