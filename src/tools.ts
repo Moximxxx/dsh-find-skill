@@ -255,8 +255,14 @@ export function registerTools(
  * @param ctx - the plugin host context.
  * @returns a registration function suitable for temp scope.
  */
-function agentRegister(agent: { ctx: { skills: { register: (skill: SkillRegistration) => () => void } } } | undefined, ctx: Context): RegisterSkill {
-  if (agent !== undefined) return (skill) => agent.ctx.skills.register(skill)
+function agentRegister(agent: { ctx: Context } | undefined, ctx: Context): RegisterSkill {
+  if (agent !== undefined) {
+    // The agent's own context may not inject the skills service; use the
+    // optional-service lookup, which yields the instance resolved for the
+    // agent's scope (agent-local registration layer) when one exists.
+    const scoped = agent.ctx.get('skills') as { register: (skill: SkillRegistration) => () => void } | undefined
+    if (scoped !== undefined) return (skill) => scoped.register(skill)
+  }
   return (skill) => ctx.skills.register(skill)
 }
 
