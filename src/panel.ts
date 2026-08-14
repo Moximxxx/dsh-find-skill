@@ -30,6 +30,8 @@ export interface PanelSkillRow {
   readonly description: string
   readonly level: 'temp' | 'project' | 'global'
   readonly disabled: boolean
+  /** Short owning-session id for temp rows (UI and agent sessions differ). */
+  readonly owner?: string
 }
 
 /** The panel's full listing grouped by level. */
@@ -69,8 +71,11 @@ export async function buildPanelListing(
   const roots = resolveRoots(config, cwd)
   const tempRows: PanelSkillRow[] = []
   for (const entry of tempManager.list()) {
-    // Temp skills are agent-scoped: only show rows owned by the viewing session.
-    if (entry.owner !== undefined && entry.owner !== sessionId) continue
+    // The UI session id and the agent session id differ in the web app, so
+    // filtering by owner hides skills the user installed moments ago. List
+    // every live temp skill; dsh's scoped registry keeps the model-visible
+    // isolation, and the panel is a management view with an owner hint.
+    void sessionId
     let description = ''
     try {
       const parsed = parseSkillContent(await readFile(join(entry.dir, 'SKILL.md'), 'utf8'), entry.dir)
@@ -83,6 +88,7 @@ export async function buildPanelListing(
       description,
       level: 'temp',
       disabled: panel.isDisabled(sessionId, entry.name),
+      ...entry.owner !== undefined ? { owner: entry.owner.replace(/^session-/, '').slice(0, 8) } : {},
     })
   }
   const managedRows = (await provider.list({ cwd })).map(candidate => {

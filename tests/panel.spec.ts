@@ -34,8 +34,10 @@ describe('buildPanelListing', () => {
       const listing = await buildPanelListing(config, provider, tempManager, panel, projectRoot, 'session-A')
       expect(listing.levels.project.map(r => r.name)).toEqual(['project-skill'])
       expect(listing.levels.global.map(r => r.name)).toEqual(['global-skill'])
-      expect(listing.levels.temp.map(r => r.name)).toEqual(['my-temp'])
+      // UI 与 agent 会话 id 不一致，面板展示全部存活临时技能并标注 owner
+      expect(listing.levels.temp.map(r => r.name)).toEqual(['my-temp', 'other-session-temp'])
       expect(listing.levels.temp[0]!.description).toBe('temp desc')
+      expect(listing.levels.temp[0]!.owner).toBe('A')
     } finally {
       rmSync(base, { recursive: true, force: true })
     }

@@ -149,6 +149,7 @@ export interface PanelRow {
   readonly description: string
   readonly level: 'temp' | 'project' | 'global'
   readonly disabled: boolean
+  readonly owner?: string
 }
 
 /** Actions the skill panel face injects per session. */
@@ -223,12 +224,16 @@ function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
     try {
       setRows(await list())
     } catch (cause) {
-      setRows([])
       setError(cause instanceof Error ? cause.message : String(cause))
     }
     setLoading(false)
   }
-  useEffect(() => { void refresh() }, [sessionId])
+  useEffect(() => {
+    void refresh()
+    // 模型可能在对话中安装/移除技能；轻量轮询保持面板同步。
+    const timer = window.setInterval(() => { void refresh() }, 4000)
+    return () => window.clearInterval(timer)
+  }, [sessionId])
 
   const act = async (line: string) => {
     setNotice(await run(line))
@@ -275,17 +280,26 @@ function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
       createElement('strong', { className: css.title }, '技能面板'),
       createElement('button', {
         className: css.iconButton,
-        title: allCollapsed ? '全部展开' : '全部折叠',
-        onClick: () => setCollapsed({ global: allCollapsed, project: allCollapsed, temp: allCollapsed }),
-      }, createElement(allCollapsed ? IconChevronDownOutline14 : IconChevronUpOutline14)),
+        title: '恢复默认位置',
+        onClick: () => {
+          try { localStorage.removeItem(POSITION_KEY) } catch { /* storage unavailable */ }
+          setPosition(undefined)
+          const element = rootRef.current
+          if (element !== null) {
+            const rect = element.getBoundingClientRect()
+            setPosition({ left: rect.left, bottom: window.innerHeight - rect.bottom })
+          }
+        },
+      }, createElement(IconChevronRightOutline14)),
       createElement('button', {
         className: css.iconButton,
         title: '刷新',
+        disabled: loading,
         onClick: () => void refresh(),
-      }, createElement(IconRefreshOutline14)),
+      }, createElement(loading ? IconRefreshOutline14 : IconRefreshOutline14)),
     ),
     loading
-      ? createElement('div', { className: css.stateLine }, '加载中…')
+      ? createElement('div', { className: css.stateLine }, rows.length === 0 ? '加载中…' : null)
       : error !== ''
         ? createElement('div', { className: css.stateLine },
             createElement('div', { className: css.errorText }, '加载失败: ' + error),
@@ -309,7 +323,7 @@ function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
                     createElement('span', {
                       className: css.rowName,
                       title: row.description === '' ? row.name : row.name + '：' + row.description,
-                    }, row.name + (row.disabled ? '（已禁用）' : '')),
+                    }, row.name + (row.disabled ? '（已禁用）' : '') + (row.owner !== undefined ? ' @' + row.owner : '')),
                     createElement('button', { className: css.actionButton, onClick: () => void act(`/skill load ${row.name}`) }, '加载'),
                     row.level === 'temp'
                       ? createElement('button', { className: css.actionButton, onClick: () => void act(`/skill remove ${row.name} --scope temp`) }, '移除')
