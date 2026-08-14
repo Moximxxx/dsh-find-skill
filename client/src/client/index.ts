@@ -238,7 +238,7 @@ function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
   const startDrag = (event: React.PointerEvent<HTMLDivElement>) => {
     const target = event.currentTarget
     target.setPointerCapture(event.pointerId)
-    const origin = readPosition() ?? { left: 0, bottom: 0 }
+    const origin = position ?? { left: 0, bottom: 0 }
     const startX = event.clientX
     const startY = event.clientY
     const baseLeft = origin.left
