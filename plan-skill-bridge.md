@@ -117,3 +117,34 @@
 | 0.1.7 | Web UI 推荐卡（dsh-find-skill-client） | ✅ 81d6d61 + eb6dfc9 | client.js 200 + boot manifest 收录 + `__ModuleLoader__` 格式修复；**浏览器确认通过** |
 
 **版本纪律**：以上全部在 develop 上完成并推送；版本号仍为 0.1.0（未 bump）；main/npm 未动。版本变更与发布等待用户确认。
+
+
+---
+
+# 技能面板 UI 重构计划（面板 v2）
+
+## 问题清单（用户反馈）
+
+1. **数据丢失**：页面刷新后技能列表消失；面板中途加载时，之前装的技能也刷新不出来。
+2. **UI 简陋**：需统一 dsh web 现有风格（复用 ui-primitives 图标/按钮/Tooltip + CSS Modules）。
+3. **形态**：悬浮可拖动面板；默认位置在 web 输入框左侧平齐。
+4. **结构**：全局级 / 项目级 / 临时级三个可折叠分组，折叠面板在卡片内部。
+
+## 阶段
+
+### P1 数据层诊断与修复
+- 把 /skill panel 的数据组装抽成纯函数 `buildPanelListing(...)` 并补单测（三层分组 + 禁用标记）。
+- headless 实测 `/skill panel` 输出，确认命令链路（execute remote → handler → JSON）无截断/异常。
+- 定位"刷新丢列表"根因（候选：a) 刷新后 UI 开了新会话，临时技能属于旧 agent 作用域；b) panel 数据未按当前会话过滤；c) 命令失败返回非 JSON 文本被静默吞掉）。修复方向：面板数据按当前会话过滤 + 区分"空列表/加载失败"两个状态 + 失败信息显式展示。
+
+### P2 UI 重构（client）
+- 风格：`@deepseek-ai/dsh-client-ui-primitives`（Icon*/Tooltip/Text 等）+ CSS Modules（构建预设已支持），视觉对齐 dsh 现有面板（参照 GoalBar/设置面板）。
+- 悬浮拖拽：fixed 定位面板 + 拖动手柄（pointer events）；默认锚点 = 输入框左侧平齐；拖动位置记忆 localStorage。
+- 内部结构：标题栏（拖拽区 + 折叠全部 + 刷新按钮）+ 三个可折叠分组（全局/项目/临时），行 = 名称/描述 + 操作按钮（加载、禁用⇄启用、移除[临时]）。
+- 状态：loading / 空态（"暂无技能"）/ 错误态；mount + 会话切换 + 每次操作后自动刷新。
+
+### P3 验证
+- 3900 部署 + 浏览器验证清单：折叠、拖动与位置记忆、禁用/启用、加载注入、移除、刷新持久、无技能空态。
+
+### P4 版本与发布（完成后询问用户）
+- 新能力 → MINOR 0.3.0；确认后走 npm + main + tag 流程（VERSIONING.md）。
