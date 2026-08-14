@@ -11,7 +11,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { applyCompactPolicy } from './lifecycle.ts'
-import { SessionSkillPanel } from './panel.ts'
+import { publishPanelState, SessionSkillPanel } from './panel.ts'
 import { registerManagedProvider } from './provider.ts'
 import { TempSkillManager } from './temp.ts'
 import { registerTools } from './tools.ts'
@@ -51,13 +51,21 @@ export function apply(ctx: Context, config: Config = {}): void {
   )
 
   const panel = new SessionSkillPanel(ctx)
-  registerTools(ctx, validated, provider, tempManager)
+  registerTools(ctx, validated, provider, tempManager, panel)
   registerCommand(ctx, validated, provider, tempManager, panel)
 
   // Session-end cleanup: dispose temporary skills and disable shadows of the ending session.
   ctx.on('session/disposed', (session: { readonly id: string }) => {
     void tempManager.disposeOwned(session.id)
     panel.disposeSession(session.id)
+  })
+
+  // Publish the panel snapshot at turn boundaries so a newly opened or
+  // resumed conversation sees the current state without any polling.
+  ctx.on('session/event', async (session, event) => {
+    const type = (event as { type: string }).type
+    if (type !== 'turn/start' && type !== 'turn/end') return
+    await publishPanelState(session, validated, provider, tempManager, panel)
   })
 
   // Compaction policy: session-scoped disposal, optionally asking the user.

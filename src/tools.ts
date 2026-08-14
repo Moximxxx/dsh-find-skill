@@ -15,6 +15,8 @@ import type { TempSkillManager } from './temp.ts'
 import { searchSkills } from './search.ts'
 import { installSkill, removeSkill, type RegisterSkill } from './install.ts'
 import type { SkillRegistration } from '@deepseek-ai/dsh-skill'
+import { publishPanelState } from './panel.ts'
+import type { SessionSkillPanel } from './panel.ts'
 
 const FIND_DESCRIPTION = 'Search the open agent-skills ecosystem (skills.sh) for installable skills. '
   + 'Use ONLY when no existing tool and no already-loaded skill can handle the user request. '
@@ -85,6 +87,7 @@ export function registerTools(
   config: Config,
   provider: ManagedSkillProvider,
   tempManager: TempSkillManager,
+  panel: SessionSkillPanel,
 ): void {
   if (config.registerFindTool !== false) {
     ctx.tools.register(defineTool({
@@ -194,7 +197,7 @@ export function registerTools(
       async execute(args, exec) {
         const scope = parseScope(args.scope)
         const agent = exec.agent
-        return installSkill(
+        const result = await installSkill(
           agentRegister(agent, ctx),
           config,
           provider,
@@ -206,6 +209,10 @@ export function registerTools(
           exec.signal,
           agent?.session.header.id,
         )
+        if (agent !== undefined) {
+          await publishPanelState(agent.session, config, provider, tempManager, panel)
+        }
+        return result
       },
       presentCall(args) {
         return {
@@ -238,7 +245,11 @@ export function registerTools(
         render: (_args, value) => [{ type: 'text', text: renderRemoveResult(value.name, value.scope) }],
       },
       async execute(args, exec) {
-        return removeSkill(provider, tempManager, parseScope(args.scope), args.name, exec.agent?.session.header.cwd)
+        const result = await removeSkill(provider, tempManager, parseScope(args.scope), args.name, exec.agent?.session.header.cwd)
+        if (exec.agent !== undefined) {
+          await publishPanelState(exec.agent.session, config, provider, tempManager, panel)
+        }
+        return result
       },
       presentCall(args) {
         return { card: 'generic', title: `${args.name}`, kind: 'delete' }

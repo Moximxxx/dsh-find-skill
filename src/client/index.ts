@@ -1,11 +1,13 @@
 /**
  * Web client contribution for dsh-find-skill: conversation cards for the
- * skill_find / skill_install / skill_remove tool calls.
+ * skill_find / skill_install / skill_remove tool calls, plus the floating
+ * skill management panel driven by durable skill-panel/state session events.
  *
- * @module dsh-find-skill-client/client
+ * @module dsh-find-skill/client
  */
 
 import { createElement, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { CSSProperties as ReactCSSProperties } from 'react'
 import {
   IconChevronDownOutline14,
   IconChevronRightOutline14,
@@ -13,9 +15,6 @@ import {
   IconRefreshOutline14,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import css from './SkillPanel.module.css'
-import type { CSSProperties as ReactCSSProperties } from 'react'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const React = { CSSProperties: undefined }
 import type {
   ClientContext,
   ConversationLocation,
@@ -34,9 +33,7 @@ export type SkillToolAction = 'find' | 'install' | 'remove'
 
 /** Replayable card data for one skill tool call. */
 export interface SkillCallData {
-  /** The tool that was called. */
   readonly action: SkillToolAction
-  /** Parsed tool arguments (query/source/skill/scope/name). */
   readonly args: Readonly<Record<string, unknown>>
 }
 
@@ -124,25 +121,6 @@ function SkillCallNodeView({ node }: ChatNodeViewProps<'dsh-find-skill'>) {
   )
 }
 
-/** Client services required by this plugin. */
-export const inject = ['conversationEvents', 'slots', 'remote', 'remote.commands']
-
-/**
- * Register the skill tool card node and its keyed chat renderer.
- * @param ctx - the client context hosting this plugin.
- */
-export function apply(ctx: ClientContext): void {
-  ctx.conversationEvents.register(skillCallDefinition)
-  registerSkillPanel(ctx)
-  ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({
-    name: 'conversation.chat.node',
-    key: 'dsh-find-skill',
-    // The slot's t seat is bound to the conversation namespace; this plugin
-    // renders plain strings and does not call t.
-    locale: 'conversation',
-  }, SkillCallNodeView))
-}
-
 /** One row of the skill panel listing. */
 export interface PanelRow {
   readonly name: string
@@ -153,29 +131,61 @@ export interface PanelRow {
   readonly path: string
 }
 
+/** Host-side panel listing shape mirrored from the session event stream. */
+export interface PanelListing {
+  readonly levels: {
+    readonly temp: readonly PanelRow[]
+    readonly project: readonly PanelRow[]
+    readonly global: readonly PanelRow[]
+  }
+}
+
+/** Latest panel snapshot delivered by skill-panel/state session events. */
+let panelState: PanelListing | null = null
+const stateListeners = new Set<(state: PanelListing) => void>()
+
+function publishState(state: PanelListing): void {
+  panelState = state
+  for (const listener of stateListeners) listener(state)
+}
+
+/** Subscribe to panel state updates (immediate delivery of the latest state). */
+export function addPanelStateListener(listener: (state: PanelListing) => void): void {
+  stateListeners.add(listener)
+  if (panelState !== null) listener(panelState)
+}
+
+/** Unsubscribe from panel state updates. */
+export function removePanelStateListener(listener: (state: PanelListing) => void): void {
+  stateListeners.delete(listener)
+}
+
+/** Replayable conversation definition consuming the host's panel snapshots. */
+const panelStateDefinition: ConversationNodeDefinition<PanelListing> = {
+  kind: 'dsh-find-skill-panel-state',
+  match: (event) => {
+    // 每个快照事件独立 id（同一 id 的重复 start 会被引擎忽略，后续快照就丢了）。
+    if ((event as { type: string }).type !== 'skill-panel/state') return null
+    return { id: String((event as { seq: number }).seq), role: 'start' }
+  },
+  start: (_context, match) => {
+    const state = match.event.data as unknown as PanelListing
+    publishState(state)
+    return state
+  },
+  update: (context) => {
+    publishState(context.state)
+    return context.state
+  },
+  publication: () => 'none',
+}
+
 /** Actions the skill panel face injects per session. */
 export interface SkillPanelActions {
   /** Owning session id (refresh key). */
   readonly sessionId: string
-  /** Refresh the listing from the host; rejects with a message on failure. */
-  list(): Promise<PanelRow[]>
   /** Run one /skill command line and return its result text. */
   run(line: string): Promise<string>
-}
-
-function flattenListing(raw: string): PanelRow[] {
-  try {
-    const parsed = JSON.parse(raw) as {
-      levels?: { temp?: PanelRow[]; project?: PanelRow[]; global?: PanelRow[] }
-    }
-    return [
-      ...(parsed.levels?.temp ?? []),
-      ...(parsed.levels?.project ?? []),
-      ...(parsed.levels?.global ?? []),
-    ]
-  } catch {
-    throw new Error('无法解析面板数据: ' + raw.slice(0, 200))
-  }
 }
 
 const LEVEL_LABELS: Record<PanelRow['level'], string> = { global: '全局', project: '项目', temp: '临时' }
@@ -197,16 +207,20 @@ function readPosition(): PanelPosition | undefined {
   return undefined
 }
 
-function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
-  const [rows, setRows] = useState<PanelRow[]>([])
-  const [error, setError] = useState('')
+function SkillPanelView({ sessionId, run }: SkillPanelActions) {
+  const [listing, setListing] = useState<PanelListing | null>(panelState)
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
   const [collapsed, setCollapsed] = useState<Record<PanelRow['level'], boolean>>({ global: false, project: false, temp: false })
   const [position, setPosition] = useState<PanelPosition | undefined>(undefined)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
-  // Anchor: default position hugs the composer's left edge; a saved drag position wins.
+  const rows = listing === null ? [] : [
+    ...listing.levels.temp,
+    ...listing.levels.project,
+    ...listing.levels.global,
+  ]
+
   useLayoutEffect(() => {
     const saved = readPosition()
     if (saved !== undefined) {
@@ -219,22 +233,18 @@ function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
     setPosition({ left: rect.left, bottom: window.innerHeight - rect.bottom })
   }, [])
 
-  const refresh = async () => {
+  useEffect(() => {
+    const listener = (state: PanelListing) => { setListing(state) }
+    addPanelStateListener(listener)
+    setListing(panelState)
+    return () => removePanelStateListener(listener)
+  }, [sessionId])
+
+  const refresh = () => {
     setLoading(true)
-    setError('')
-    try {
-      setRows(await list())
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
-    }
+    setListing(panelState)
     setLoading(false)
   }
-  useEffect(() => {
-    void refresh()
-    // 模型可能在对话中安装/移除技能；轻量轮询保持面板同步。
-    const timer = window.setInterval(() => { void refresh() }, 4000)
-    return () => window.clearInterval(timer)
-  }, [sessionId])
 
   const act = async (line: string) => {
     try {
@@ -242,7 +252,7 @@ function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
     } catch (cause) {
       setNotice('执行失败: ' + (cause instanceof Error ? cause.message : String(cause)))
     }
-    await refresh()
+    refresh()
   }
 
   const startDrag = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -272,7 +282,6 @@ function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
   const toggleLevel = (level: PanelRow['level']) => {
     setCollapsed(previous => ({ ...previous, [level]: !previous[level] }))
   }
-  const allCollapsed = Object.values(collapsed).every(value => value)
 
   return createElement('div', {
     ref: rootRef,
@@ -300,44 +309,39 @@ function SkillPanelView({ sessionId, list, run }: SkillPanelActions) {
         className: css.iconButton,
         title: '刷新',
         disabled: loading,
-        onClick: () => void refresh(),
-      }, createElement(loading ? IconRefreshOutline14 : IconRefreshOutline14)),
+        onClick: refresh,
+      }, createElement(IconRefreshOutline14)),
     ),
     loading
       ? createElement('div', { className: css.stateLine }, rows.length === 0 ? '加载中…' : null)
-      : error !== ''
-        ? createElement('div', { className: css.stateLine },
-            createElement('div', { className: css.errorText }, '加载失败: ' + error),
-            createElement('button', { className: css.actionButton, onClick: () => void refresh() }, '重试'),
+      : ['global', 'project', 'temp'].map(level => {
+          const levelRows = rows.filter(row => row.level === level)
+          const levelCollapsed = collapsed[level as PanelRow['level']]
+          return createElement('section', { key: level, className: css.section },
+            createElement('button', {
+              className: css.sectionHeader,
+              onClick: () => toggleLevel(level as PanelRow['level']),
+            },
+              createElement(levelCollapsed ? IconChevronRightOutline14 : IconChevronDownOutline14),
+              createElement('span', null, LEVEL_LABELS[level as PanelRow['level']] + '技能'),
+              createElement('span', { className: css.count }, String(levelRows.length)),
+            ),
+            levelCollapsed ? null : levelRows.length === 0
+              ? createElement('div', { className: css.emptyLine }, '暂无')
+              : levelRows.map(row => createElement('div', { key: row.name, className: css.row },
+                  createElement('span', {
+                    className: css.rowName,
+                    title: row.description === '' ? row.name : row.name + '：' + row.description,
+                  }, row.name + (row.disabled ? '（已禁用）' : '') + (row.owner !== undefined ? ' @' + row.owner : '')),
+                  createElement('button', { className: css.actionButton, onClick: () => void act(`/skill load ${row.name} --path ${row.path}`) }, '加载'),
+                  row.level === 'temp'
+                    ? createElement('button', { className: css.actionButton, onClick: () => void act(`/skill remove ${row.name} --scope temp`) }, '移除')
+                    : row.disabled
+                      ? createElement('button', { className: css.actionButton, onClick: () => void act(`/skill enable ${row.name}`) }, '启用')
+                      : createElement('button', { className: css.actionButton, onClick: () => void act(`/skill disable ${row.name}`) }, '禁用'),
+                )),
           )
-        : ['global', 'project', 'temp'].map(level => {
-            const levelRows = rows.filter(row => row.level === level)
-            const levelCollapsed = collapsed[level as PanelRow['level']]
-            return createElement('section', { key: level, className: css.section },
-              createElement('button', {
-                className: css.sectionHeader,
-                onClick: () => toggleLevel(level as PanelRow['level']),
-              },
-                createElement(levelCollapsed ? IconChevronRightOutline14 : IconChevronDownOutline14),
-                createElement('span', null, LEVEL_LABELS[level as PanelRow['level']] + '技能'),
-                createElement('span', { className: css.count }, String(levelRows.length)),
-              ),
-              levelCollapsed ? null : levelRows.length === 0
-                ? createElement('div', { className: css.emptyLine }, '暂无')
-                : levelRows.map(row => createElement('div', { key: row.name, className: css.row },
-                    createElement('span', {
-                      className: css.rowName,
-                      title: row.description === '' ? row.name : row.name + '：' + row.description,
-                    }, row.name + (row.disabled ? '（已禁用）' : '') + (row.owner !== undefined ? ' @' + row.owner : '')),
-                    createElement('button', { className: css.actionButton, onClick: () => void act(`/skill load ${row.name} --path ${row.path}`) }, '加载'),
-                    row.level === 'temp'
-                      ? createElement('button', { className: css.actionButton, onClick: () => void act(`/skill remove ${row.name} --scope temp`) }, '移除')
-                      : row.disabled
-                        ? createElement('button', { className: css.actionButton, onClick: () => void act(`/skill enable ${row.name}`) }, '启用')
-                        : createElement('button', { className: css.actionButton, onClick: () => void act(`/skill disable ${row.name}`) }, '禁用'),
-                  )),
-            )
-          }),
+        }),
     notice === '' ? null : createElement('div', { className: css.stateLine }, notice),
   )
 }
@@ -353,10 +357,6 @@ function registerSkillPanel(ctx: ClientContext): void {
     const text = result.value?.result?.text
     return text === undefined ? '(无输出)' : text
   }
-  const listFor = async (sessionId: SessionId): Promise<PanelRow[]> => {
-    const raw = await runCommand(sessionId, '/skill panel')
-    return flattenListing(raw)
-  }
 
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock',
@@ -365,8 +365,21 @@ function registerSkillPanel(ctx: ClientContext): void {
     locale: 'conversation',
     inject: (sessionId): SkillPanelActions => ({
       sessionId: String(sessionId),
-      list: () => listFor(sessionId),
       run: (line) => runCommand(sessionId, line),
     }),
   }, SkillPanelView))
+}
+
+/** Client services required by this plugin. */
+export const inject = ['conversationEvents', 'slots', 'remote', 'remote.commands']
+
+/**
+ * Register the skill tool card node, the panel state consumer, and the
+ * keyed dock renderer.
+ * @param ctx - the client context hosting this plugin.
+ */
+export function apply(ctx: ClientContext): void {
+  ctx.conversationEvents.register(skillCallDefinition)
+  ctx.conversationEvents.register(panelStateDefinition)
+  registerSkillPanel(ctx)
 }

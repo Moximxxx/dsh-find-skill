@@ -17,6 +17,46 @@ import type { TempSkillManager } from './temp.ts'
 import { resolveRoots } from './roots.ts'
 import { parseSkillContent } from './frontmatter.ts'
 
+/** Durable whole-value panel snapshot appended to the session log on change. */
+declare module '@deepseek-ai/dsh-session/types' {
+  interface SessionEventMap {
+    /** Whole-value skill panel state for the owning session. */
+    'skill-panel/state': PanelListing
+  }
+}
+
+/** Session append surface used by panel state publishing. */
+export interface PanelSession {
+  append(type: 'skill-panel/state', data: PanelListing): unknown
+}
+
+/**
+ * Publish the panel state for one agent by appending a whole-value event to
+ * its session log. The client renders the panel from this replayable stream.
+ * @param agent - the owning agent whose session receives the snapshot.
+ * @param config - validated plugin configuration.
+ * @param provider - managed provider for project/global rows.
+ * @param tempManager - temporary skill lifecycle manager.
+ * @param panel - panel manager for disable state.
+ */
+export async function publishPanelState(
+  session: { header: { readonly cwd?: string; readonly id: string }; append: PanelSession['append'] },
+  config: Config,
+  provider: ManagedSkillProvider,
+  tempManager: TempSkillManager,
+  panel: SessionSkillPanel,
+): Promise<void> {
+  const listing = await buildPanelListing(
+    config,
+    provider,
+    tempManager,
+    panel,
+    session.header.cwd,
+    String(session.header.id),
+  )
+  session.append('skill-panel/state', listing)
+}
+
 /** Structural agent view used by panel operations. */
 export interface PanelAgent {
   readonly ctx: Context
@@ -113,6 +153,7 @@ export async function buildPanelListing(
     },
   }
 }
+
 
 export class SessionSkillPanel {
   /** session id -> skill name -> shadow disposer. */
