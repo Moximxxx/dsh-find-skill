@@ -41,15 +41,13 @@ export interface RemoveResult {
   readonly scope: InstallScope
 }
 
-/** Services the install service needs from the host context. */
-export interface InstallServices {
-  /** The skill registry; used only for temporary registrations. */
-  readonly skills: Pick<Context['skills'], 'register'>
-}
+/** Registration function used for temporary skills. */
+export type RegisterSkill = (skill: SkillRegistration) => () => void
 
 /**
  * Install a skill into a managed scope.
- * @param ctx - host context (for skill registration on temp scope).
+ * @param registerSkill - registration function for temp scope; pass the owning
+ *   agent's scoped register so the skill is agent-local and auto-unwinds.
  * @param config - validated plugin configuration.
  * @param provider - managed provider used to invalidate catalogs.
  * @param tempManager - temporary skill lifecycle manager.
@@ -62,7 +60,7 @@ export interface InstallServices {
  * @returns the install result; throws fail-loud on fetch or validation errors.
  */
 export async function installSkill(
-  ctx: InstallServices,
+  registerSkill: RegisterSkill,
   config: Config,
   provider: ManagedSkillProvider,
   tempManager: TempSkillManager,
@@ -114,6 +112,7 @@ export async function installSkill(
         } satisfies SkillRegistration,
         targetDir,
         owner,
+        registerSkill,
       )
     } else {
       provider.notifyChanged()
@@ -175,7 +174,8 @@ export interface UpdateResult {
 /**
  * Update a managed skill by re-fetching its recorded source and replacing the
  * installed bundle.
- * @param ctx - host context (for skill registration on temp scope).
+ * @param registerSkill - registration function for temp scope; pass the owning
+ *   agent's scoped register so the skill is agent-local and auto-unwinds.
  * @param config - validated plugin configuration.
  * @param provider - managed provider used to invalidate catalogs.
  * @param tempManager - temporary skill lifecycle manager.
@@ -186,7 +186,7 @@ export interface UpdateResult {
  * @returns the update result; throws when the skill has no recorded source.
  */
 export async function updateSkill(
-  ctx: InstallServices,
+  registerSkill: RegisterSkill,
   config: Config,
   provider: ManagedSkillProvider,
   tempManager: TempSkillManager,
@@ -241,6 +241,7 @@ export async function updateSkill(
           } satisfies SkillRegistration,
           dir,
           owner,
+          registerSkill,
         )
       } else {
         provider.notifyChanged()

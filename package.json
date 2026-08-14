@@ -1,7 +1,7 @@
 {
   "name": "dsh-find-skill",
   "description": "Bridge the vercel-labs/skills ecosystem into dsh: LLM-driven skill search, install, and lifecycle for temp/project/global scopes",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

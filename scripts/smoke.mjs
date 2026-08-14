@@ -34,7 +34,7 @@ if (candidates.length === 0) throw new Error('search returned nothing')
 // 2) 真实 CLI 安装到 temp
 console.log('\n== install via npx skills (temp) ==')
 const installed = await installSkill(
-  { skills: { register: () => () => {} } },
+  () => () => {},
   config, provider, tempManager, 'temp',
   'vercel-labs/agent-skills', 'vercel-react-best-practices',
   join(base, 'proj'),
@@ -50,7 +50,7 @@ console.log('provider candidates:', listed.map(c => c.name))
 // 4) 再装一个 project 作用域，验证 provider 能看到
 console.log('\n== install (project) ==')
 const installedProject = await installSkill(
-  { skills: { register: () => () => {} } },
+  () => () => {},
   config, provider, tempManager, 'project',
   'vercel-labs/agent-skills', 'web-design-guidelines',
   join(base, 'proj'),
@@ -63,7 +63,7 @@ if (!listed2.some(c => c.name === 'web-design-guidelines')) throw new Error('pro
 // 5) update（重新拉取同一来源替换）
 console.log('\\n== update (project) ==')
 const updated = await updateSkill(
-  { skills: { register: () => () => {} } },
+  () => () => {},
   config, provider, tempManager, 'project', 'web-design-guidelines',
   join(base, 'proj'),
 )

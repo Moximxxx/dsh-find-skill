@@ -14,7 +14,8 @@ import type { Config, InstallScope } from './config.ts'
 import type { ManagedSkillProvider } from './provider.ts'
 import type { TempSkillManager } from './temp.ts'
 import { searchSkills } from './search.ts'
-import { installSkill, removeSkill, syncSkills, updateSkill } from './install.ts'
+import { installSkill, removeSkill, syncSkills, updateSkill, type RegisterSkill } from './install.ts'
+import type { SkillRegistration } from '@deepseek-ai/dsh-skill'
 
 /**
  * Register the /skill human command when the commands service is present.
@@ -75,7 +76,8 @@ async function handleSkillCommand(
     }
     case 'install': {
       if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill install <source> [--skill name] [--scope temp|project|global]' }
-      const result = await installSkill(ctx, config, provider, tempManager, parsed.scope, parsed.arg, parsed.skill, cwd)
+      const registerSkill: RegisterSkill = (skill) => (invocation.agent.ctx.get('skills') as { register: (s: SkillRegistration) => () => void }).register(skill)
+      const result = await installSkill(registerSkill, config, provider, tempManager, parsed.scope, parsed.arg, parsed.skill, cwd)
       return {
         kind: 'success',
         text: `${result.name} installed (${result.scope}) at ${result.path}`,
@@ -83,7 +85,8 @@ async function handleSkillCommand(
     }
     case 'update': {
       if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill update <name> [--scope temp|project|global]' }
-      const result = await updateSkill(ctx, config, provider, tempManager, parsed.scope, parsed.arg, cwd)
+      const registerSkill: RegisterSkill = (skill) => (invocation.agent.ctx.get('skills') as { register: (s: SkillRegistration) => () => void }).register(skill)
+      const result = await updateSkill(registerSkill, config, provider, tempManager, parsed.scope, parsed.arg, cwd)
       return { kind: 'success', text: `${result.name} updated (${result.scope})` }
     }
     case 'sync': {

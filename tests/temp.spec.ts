@@ -56,6 +56,20 @@ describe('TempSkillManager', () => {
     rmSync(base, { recursive: true, force: true })
   })
 
+  it('uses the per-add register override and its disposer', async () => {
+    const base = baseDir()
+    const log: string[] = []
+    const { manager } = makeManager(base, log)
+    const scopedRegister = (skill: unknown) => {
+      log.push('scoped-register:' + (skill as { name: string }).name)
+      return () => { log.push('scoped-dispose:' + (skill as { name: string }).name) }
+    }
+    await manager.add(skill('alpha-skill'), join(base, 'alpha-skill'), 'session-1', scopedRegister)
+    expect(log).toEqual(['scoped-register:alpha-skill'])
+    await manager.remove('alpha-skill')
+    expect(log).toContain('scoped-dispose:alpha-skill')
+    rmSync(base, { recursive: true, force: true })
+  })
   it('disposes only entries owned by one session', async () => {
     const base = baseDir()
     const log: string[] = []
