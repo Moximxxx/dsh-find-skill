@@ -11,6 +11,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { applyCompactPolicy } from './lifecycle.ts'
+import { SessionSkillPanel } from './panel.ts'
 import { registerManagedProvider } from './provider.ts'
 import { TempSkillManager } from './temp.ts'
 import { registerTools } from './tools.ts'
@@ -49,12 +50,14 @@ export function apply(ctx: Context, config: Config = {}): void {
     roots.tempSkillDir,
   )
 
+  const panel = new SessionSkillPanel(ctx)
   registerTools(ctx, validated, provider, tempManager)
-  registerCommand(ctx, validated, provider, tempManager)
+  registerCommand(ctx, validated, provider, tempManager, panel)
 
-  // Session-end cleanup: dispose temporary skills owned by the ending session.
+  // Session-end cleanup: dispose temporary skills and disable shadows of the ending session.
   ctx.on('session/disposed', (session: { readonly id: string }) => {
     void tempManager.disposeOwned(session.id)
+    panel.disposeSession(session.id)
   })
 
   // Compaction policy: session-scoped disposal, optionally asking the user.

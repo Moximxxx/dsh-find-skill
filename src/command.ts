@@ -16,6 +16,9 @@ import type { TempSkillManager } from './temp.ts'
 import { searchSkills } from './search.ts'
 import { installSkill, removeSkill, syncSkills, updateSkill, type RegisterSkill } from './install.ts'
 import type { SkillRegistration } from '@deepseek-ai/dsh-skill'
+import type { SessionSkillPanel } from './panel.ts'
+import { resolveRoots } from './roots.ts'
+import { dirname } from 'node:path'
 
 /**
  * Register the /skill human command when the commands service is present.
@@ -29,6 +32,7 @@ export function registerCommand(
   config: Config,
   provider: ManagedSkillProvider,
   tempManager: TempSkillManager,
+  panel: SessionSkillPanel,
 ): void {
   const commands = ctx.get('commands') as { register: (definition: unknown) => () => void } | undefined
   if (commands === undefined) return
@@ -38,7 +42,7 @@ export function registerCommand(
     input: { hint: 'find <query> | install <source> [--skill name] [--scope temp|project|global] | update <name> [--scope ...] | sync | remove <name> [--scope ...] | list' },
     handler: async (invocation: CommandInvocation): Promise<CommandResult> => {
       try {
-        return await handleSkillCommand(ctx, invocation, config, provider, tempManager)
+        return await handleSkillCommand(ctx, invocation, config, provider, tempManager, panel)
       } catch (error) {
         return { kind: 'error', text: error instanceof Error ? error.message : String(error) }
       }
@@ -52,6 +56,7 @@ async function handleSkillCommand(
   config: Config,
   provider: ManagedSkillProvider,
   tempManager: TempSkillManager,
+  panel: SessionSkillPanel,
 ): Promise<CommandResult> {
   const cwd = invocation.agent.session?.header.cwd
   const parsed = parseSkillCommand(invocation.rawInput)
@@ -89,6 +94,49 @@ async function handleSkillCommand(
       const result = await updateSkill(registerSkill, config, provider, tempManager, parsed.scope, parsed.arg, cwd)
       return { kind: 'success', text: `${result.name} updated (${result.scope})` }
     }
+    case 'panel': {
+      const sessionId = String(invocation.agent.session.header.id)
+      const roots = resolveRoots(config, cwd)
+      const tempRows = tempManager.list().map(entry => ({
+        name: entry.name,
+        description: '',
+        level: 'temp',
+        disabled: panel.isDisabled(sessionId, entry.name),
+      }))
+      const managedRows = (await provider.list({ cwd })).map(candidate => {
+        const dir = dirname(candidate.path ?? '')
+        const level = dir.startsWith(roots.projectSkillDir) ? 'project' : 'global'
+        return {
+          name: candidate.name,
+          description: candidate.description,
+          level,
+          disabled: panel.isDisabled(sessionId, candidate.name),
+        }
+      })
+      return { kind: 'success', text: JSON.stringify({ levels: { temp: tempRows, project: managedRows.filter(row => row.level === 'project'), global: managedRows.filter(row => row.level === 'global') } }) }
+    }
+    case 'disable': {
+      if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill disable <name>' }
+      const sessionId = String(invocation.agent.session.header.id)
+      const error = await panel.disable(invocation.agent as never, sessionId, parsed.arg)
+      return error === undefined
+        ? { kind: 'success', text: `disabled ${parsed.arg} for this session` }
+        : { kind: 'error', text: error }
+    }
+    case 'enable': {
+      if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill enable <name>' }
+      const sessionId = String(invocation.agent.session.header.id)
+      return panel.enable(sessionId, parsed.arg)
+        ? { kind: 'success', text: `enabled ${parsed.arg} for this session` }
+        : { kind: 'error', text: `${parsed.arg} is not disabled in this session` }
+    }
+    case 'load': {
+      if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill load <name>' }
+      const error = await panel.load(invocation.agent as never, parsed.arg)
+      return error === undefined
+        ? { kind: 'success', text: `loaded ${parsed.arg} into the latest context` }
+        : { kind: 'error', text: error }
+    }
     case 'sync': {
       const result = await syncSkills(config, provider, cwd)
       const summary = result.synced.length === 0
@@ -125,7 +173,7 @@ async function handleSkillCommand(
 /** Parsed /skill command line. */
 export interface ParsedSkillCommand {
   /** Action to perform. */
-  readonly action: 'find' | 'install' | 'update' | 'sync' | 'remove' | 'list'
+  readonly action: 'find' | 'install' | 'update' | 'sync' | 'remove' | 'list' | 'panel' | 'disable' | 'enable' | 'load'
   /** Positional argument (query, source, or name). */
   readonly arg?: string
   /** --skill option value. */
@@ -142,8 +190,8 @@ export interface ParsedSkillCommand {
 export function parseSkillCommand(rawInput: string): ParsedSkillCommand {
   const tokens = rawInput.trim().split(/\s+/).filter(Boolean)
   const action = tokens[0] ?? 'list'
-  if (action !== 'find' && action !== 'install' && action !== 'update' && action !== 'sync' && action !== 'remove' && action !== 'list') {
-    throw new Error(`${action} is not a /skill action (find | install | update | sync | remove | list)`)
+  if (action !== 'find' && action !== 'install' && action !== 'update' && action !== 'sync' && action !== 'remove' && action !== 'list' && action !== 'panel' && action !== 'disable' && action !== 'enable' && action !== 'load') {
+    throw new Error(`${action} is not a /skill action (find | install | update | sync | remove | list | panel | disable | enable | load)`)
   }
   const rest = tokens.slice(1)
   const positional = rest.find(token => !token.startsWith('--'))

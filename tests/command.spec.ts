@@ -34,6 +34,13 @@ describe('parseSkillCommand', () => {
     expect(parseSkillCommand('sync')).toEqual({ action: 'sync' })
   })
 
+  it('parses panel, disable, enable and load', () => {
+    expect(parseSkillCommand('panel')).toEqual({ action: 'panel' })
+    expect(parseSkillCommand('disable web-design-guidelines')).toEqual({ action: 'disable', arg: 'web-design-guidelines' })
+    expect(parseSkillCommand('enable web-design-guidelines')).toEqual({ action: 'enable', arg: 'web-design-guidelines' })
+    expect(parseSkillCommand('load vercel-react-best-practices')).toEqual({ action: 'load', arg: 'vercel-react-best-practices' })
+  })
+
   it('rejects invalid actions and scopes', () => {
     expect(() => parseSkillCommand('frobnicate x')).toThrow(/not a \/skill action/)
     expect(() => parseSkillCommand('install x --scope bogus')).toThrow(/not a valid scope/)
