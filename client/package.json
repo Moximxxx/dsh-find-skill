@@ -1,7 +1,7 @@
 {
   "name": "dsh-find-skill-client",
   "description": "Web client UI for dsh-find-skill: conversation cards for skill_find / skill_install / skill_remove tool calls",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
