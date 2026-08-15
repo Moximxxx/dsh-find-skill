@@ -138,6 +138,8 @@ export interface PanelListing {
     readonly project: readonly PanelRow[]
     readonly global: readonly PanelRow[]
   }
+  /** Session cwd recorded with the snapshot (name-based load fallback). */
+  readonly cwd: string
 }
 
 /** Latest panel snapshot delivered by skill-panel/state session events. */
@@ -333,7 +335,10 @@ function SkillPanelView({ sessionId, run }: SkillPanelActions) {
                     className: css.rowName,
                     title: row.description === '' ? row.name : row.name + '：' + row.description,
                   }, row.name + (row.disabled ? '（已禁用）' : '') + (row.owner !== undefined ? ' @' + row.owner : '')),
-                  createElement('button', { className: css.actionButton, onClick: () => void act(`/skill load ${row.name} --path ${row.path}`) }, '加载'),
+                  createElement('button', {
+                    className: css.actionButton,
+                    onClick: () => void act(row.path !== '' ? `/skill load ${row.name} --path ${row.path}` : `/skill load ${row.name} --cwd ${listing?.cwd ?? ''}`),
+                  }, '加载'),
                   row.level === 'temp'
                     ? createElement('button', { className: css.actionButton, onClick: () => void act(`/skill remove ${row.name} --scope temp`) }, '移除')
                     : row.disabled

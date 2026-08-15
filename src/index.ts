@@ -65,7 +65,7 @@ export function apply(ctx: Context, config: Config = {}): void {
   ctx.on('session/event', async (session, event) => {
     const type = (event as { type: string }).type
     if (type !== 'turn/start' && type !== 'turn/end') return
-    await publishPanelState(session, validated, provider, tempManager, panel)
+    await publishPanelState(ctx, session, validated, provider, tempManager, panel)
   })
 
   // Compaction policy: session-scoped disposal, optionally asking the user.

@@ -6,7 +6,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import type { SkillDefinition, SkillRegistration } from '@deepseek-ai/dsh-skill'
+import type { SkillDefinition, SkillRegistration, SkillSummary } from '@deepseek-ai/dsh-skill'
 import { renderSkillContent } from '@deepseek-ai/dsh-skill'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { dirname, join } from 'node:path'
@@ -40,30 +40,31 @@ export interface PanelSession {
  * @param panel - panel manager for disable state.
  */
 export async function publishPanelState(
+  ctx: Context,
   session: { header: { readonly cwd?: string; readonly id: string }; append: PanelSession['append'] },
   config: Config,
   provider: ManagedSkillProvider,
   tempManager: TempSkillManager,
   panel: SessionSkillPanel,
 ): Promise<void> {
+  const sessionId = String(session.header.id)
+  const agents = ctx.get('agents') as { get: (id: unknown) => unknown } | undefined
+  const agent = agents?.get(sessionId)
+  const skills = ctx.get('skills') as { list: (o: unknown) => Promise<readonly SkillSummary[]> } | undefined
+  const summaries = skills === undefined || agent === undefined
+    ? []
+    : await skills.list({ cwd: session.header.cwd, scope: agent })
   const listing = await buildPanelListing(
     config,
     provider,
     tempManager,
     panel,
     session.header.cwd,
-    String(session.header.id),
+    sessionId,
+    summaries,
   )
   session.append('skill-panel/state', listing)
 }
-
-/** Structural agent view used by panel operations. */
-export interface PanelAgent {
-  readonly ctx: Context
-  readonly session: { readonly header: { readonly cwd?: string; readonly id: string } }
-  inject(message: unknown): void
-}
-
 /** One row of the panel's per-level skill listing. */
 export interface PanelSkillRow {
   readonly name: string
@@ -83,23 +84,28 @@ export interface PanelListing {
     readonly project: readonly PanelSkillRow[]
     readonly global: readonly PanelSkillRow[]
   }
+  /** Session cwd recorded with the snapshot (name-based load fallback). */
+  readonly cwd: string
+}
+
+/** Structural agent view used by panel operations. */
+export interface PanelAgent {
+  readonly ctx: Context
+  readonly session: { readonly header: { readonly cwd?: string; readonly id: string } }
+  inject(message: unknown): void
 }
 
 /**
- * Tracks per-session disable shadows and context loads for the web skill
- * panel. Shadows are agent-layer runtime registrations with both invocation
- * flags off, which win over global-layer provider candidates for the owning
- * agent only; disposing the shadow re-enables the skill for that session.
- */
-/**
- * Build the panel listing for one session: temp rows scoped to that session,
- * plus project/global managed rows with disable state.
+ * Build the panel listing for one session: temp rows from the lifecycle
+ * manager, plus the full merged registry view for project/global levels
+ * (native roots like .dsh/skills and managed roots alike).
  * @param config - validated plugin configuration.
- * @param provider - managed provider for project/global rows.
+ * @param provider - managed provider for managed rows and paths.
  * @param tempManager - temporary skill lifecycle manager.
  * @param panel - panel manager for disable state.
  * @param cwd - workspace selector for managed roots.
- * @param sessionId - the viewing session; temp rows are filtered to its owner.
+ * @param sessionId - the viewing session (disable state key).
+ * @param summaries - merged registry summaries for native roots.
  * @returns the three-level listing.
  */
 export async function buildPanelListing(
@@ -109,8 +115,10 @@ export async function buildPanelListing(
   panel: SessionSkillPanel,
   cwd: string | undefined,
   sessionId: string,
+  summaries: readonly SkillSummary[] = [],
 ): Promise<PanelListing> {
   const roots = resolveRoots(config, cwd)
+  const summaryBy = new Map(summaries.map(summary => [summary.name, summary]))
   const tempRows: PanelSkillRow[] = []
   for (const entry of tempManager.list()) {
     // The UI session id and the agent session id differ in the web app, so
@@ -134,26 +142,58 @@ export async function buildPanelListing(
       path: entry.dir,
     })
   }
-  const managedRows = (await provider.list({ cwd })).map(candidate => {
+  const managedBy = new Map((await provider.list({ cwd })).map(candidate => [candidate.name, candidate]))
+  const projectRows: PanelSkillRow[] = []
+  const globalRows: PanelSkillRow[] = []
+  for (const summary of summaries) {
+    if (summary.name === '') continue
+    const managed = managedBy.get(summary.name)
+    if (managed !== undefined) {
+      // Managed entries carry absolute paths and take precedence over bare summaries.
+      const dir = dirname(managed.path ?? '')
+      const level: 'project' | 'global' = dir.startsWith(roots.projectSkillDir) ? 'project' : 'global'
+      ;(level === 'project' ? projectRows : globalRows).push({
+        name: managed.name,
+        description: managed.description,
+        level,
+        disabled: panel.isDisabled(sessionId, managed.name),
+        path: dir,
+      })
+      continue
+    }
+    // Native roots (.dsh/skills, .agents/skills, user roots): no path;
+    // load falls back to name + recorded cwd.
+    const level: 'project' | 'global' = summary.source.startsWith('project') ? 'project' : 'global'
+    ;(level === 'project' ? projectRows : globalRows).push({
+      name: summary.name,
+      description: summary.description,
+      level,
+      disabled: panel.isDisabled(sessionId, summary.name),
+      path: '',
+    })
+  }
+  // Managed entries missing from the merged view (registry anomaly fallback).
+  for (const candidate of managedBy.values()) {
+    if (summaryBy.has(candidate.name)) continue
     const dir = dirname(candidate.path ?? '')
     const level: 'project' | 'global' = dir.startsWith(roots.projectSkillDir) ? 'project' : 'global'
-    return {
+    ;(level === 'project' ? projectRows : globalRows).push({
       name: candidate.name,
       description: candidate.description,
       level,
       disabled: panel.isDisabled(sessionId, candidate.name),
       path: dir,
-    }
-  })
+    })
+  }
   return {
     levels: {
       temp: tempRows,
-      project: managedRows.filter(row => row.level === 'project'),
-      global: managedRows.filter(row => row.level === 'global'),
+      project: projectRows,
+      global: globalRows,
     },
+    cwd: cwd ?? '',
   }
 }
-
 
 export class SessionSkillPanel {
   /** session id -> skill name -> shadow disposer. */
@@ -238,6 +278,38 @@ export class SessionSkillPanel {
    * @param dir - absolute skill directory containing SKILL.md.
    * @returns an error message when the skill cannot be read, else undefined.
    */
+  /**
+   * Load a skill by name through the registry (fallback for non-managed
+   * skills whose directories the panel does not know).
+   * @param agent - the session's agent receiving the injected content.
+   * @param name - skill name to load.
+   * @param cwd - workspace selector recorded with the panel snapshot.
+   * @returns an error message when the skill cannot be resolved, else undefined.
+   */
+  async loadByName(agent: PanelAgent, name: string, cwd: string): Promise<string | undefined> {
+    const skills = agent.ctx.get('skills') as { get: (n: string, o: unknown) => Promise<SkillDefinition | undefined> } | undefined
+    if (skills === undefined) return 'skills service unavailable for this agent'
+    const skill = await skills.get(name, { cwd: cwd === '' ? undefined : cwd, scope: agent })
+    if (skill === undefined) return `skill ${name} is unknown or no longer available`
+    try {
+      agent.inject(createUserMessage({
+        content: [{
+          type: 'text',
+          text: renderSkillContent({
+            name: skill.name,
+            provider: skill.provider,
+            ...skill.resourceBase !== undefined ? { resourceBase: skill.resourceBase } : {},
+            content: skill.content,
+          }),
+        }],
+        source: { kind: 'plugin', plugin: 'dsh-find-skill' },
+      }))
+    } catch (error) {
+      return `failed to inject: ${error instanceof Error ? error.message : String(error)}`
+    }
+    return undefined
+  }
+
   async loadFromPath(agent: PanelAgent, name: string, dir: string): Promise<string | undefined> {
     try {
       const parsed = parseSkillContent(await readFile(join(dir, 'SKILL.md'), 'utf8'), dir)

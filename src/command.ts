@@ -81,7 +81,7 @@ async function handleSkillCommand(
       if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill install <source> [--skill name] [--scope temp|project|global]' }
       const registerSkill: RegisterSkill = (skill) => (invocation.agent.ctx.get('skills') as { register: (s: SkillRegistration) => () => void }).register(skill)
       const result = await installSkill(registerSkill, config, provider, tempManager, parsed.scope, parsed.arg, parsed.skill, cwd)
-      await publishPanelState(invocation.agent.session, config, provider, tempManager, panel)
+      await publishPanelState(ctx, invocation.agent.session, config, provider, tempManager, panel)
       return {
         kind: 'success',
         text: `${result.name} installed (${result.scope}) at ${result.path}`,
@@ -91,19 +91,20 @@ async function handleSkillCommand(
       if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill update <name> [--scope temp|project|global]' }
       const registerSkill: RegisterSkill = (skill) => (invocation.agent.ctx.get('skills') as { register: (s: SkillRegistration) => () => void }).register(skill)
       const result = await updateSkill(registerSkill, config, provider, tempManager, parsed.scope, parsed.arg, cwd)
-      await publishPanelState(invocation.agent.session, config, provider, tempManager, panel)
+      await publishPanelState(ctx, invocation.agent.session, config, provider, tempManager, panel)
       return { kind: 'success', text: `${result.name} updated (${result.scope})` }
     }
     case 'panel': {
       const sessionId = String(invocation.agent.session.header.id)
-      const listing = await buildPanelListing(config, provider, tempManager, panel, cwd, sessionId)
+      const summaries = await ctx.skills.list({ cwd, scope: invocation.agent })
+      const listing = await buildPanelListing(config, provider, tempManager, panel, cwd, sessionId, summaries)
       return { kind: 'success', text: JSON.stringify(listing) }
     }
     case 'disable': {
       if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill disable <name>' }
       const sessionId = String(invocation.agent.session.header.id)
       const error = await panel.disable(invocation.agent as never, sessionId, parsed.arg)
-      await publishPanelState(invocation.agent.session, config, provider, tempManager, panel)
+      await publishPanelState(ctx, invocation.agent.session, config, provider, tempManager, panel)
       return error === undefined
         ? { kind: 'success', text: `disabled ${parsed.arg} for this session` }
         : { kind: 'error', text: error }
@@ -111,24 +112,28 @@ async function handleSkillCommand(
     case 'enable': {
       if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill enable <name>' }
       const sessionId = String(invocation.agent.session.header.id)
-      await publishPanelState(invocation.agent.session, config, provider, tempManager, panel)
+      await publishPanelState(ctx, invocation.agent.session, config, provider, tempManager, panel)
       return panel.enable(sessionId, parsed.arg)
         ? { kind: 'success', text: `enabled ${parsed.arg} for this session` }
         : { kind: 'error', text: `${parsed.arg} is not disabled in this session` }
     }
     case 'load': {
-      if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill load <name> --path <dir>' }
-      const path = optionValue(invocation.rawInput.trim().split(/\s+/).filter(Boolean).slice(1), '--path')
-      if (path === undefined) return { kind: 'error', text: 'usage: /skill load <name> --path <dir>' }
-      const error = await panel.loadFromPath(invocation.agent as never, parsed.arg, path)
-      await publishPanelState(invocation.agent.session, config, provider, tempManager, panel)
+      if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill load <name> [--path <dir> | --cwd <dir>]' }
+      const tokens = invocation.rawInput.trim().split(/\s+/).filter(Boolean).slice(1)
+      const path = optionValue(tokens, '--path')
+      const loadCwd = optionValue(tokens, '--cwd')
+      if (path === undefined) return { kind: 'error', text: 'usage: /skill load <name> [--path <dir> | --cwd <dir>]' }
+      const error = path !== undefined
+        ? await panel.loadFromPath(invocation.agent as never, parsed.arg, path)
+        : await panel.loadByName(invocation.agent as never, parsed.arg, loadCwd ?? '')
+      await publishPanelState(ctx, invocation.agent.session, config, provider, tempManager, panel)
       return error === undefined
         ? { kind: 'success', text: `loaded ${parsed.arg} into the latest context` }
         : { kind: 'error', text: error }
     }
     case 'sync': {
       const result = await syncSkills(config, provider, cwd)
-      await publishPanelState(invocation.agent.session, config, provider, tempManager, panel)
+      await publishPanelState(ctx, invocation.agent.session, config, provider, tempManager, panel)
       const summary = result.synced.length === 0
         ? 'no new node_modules skills found'
         : result.synced.map(item => item.name).join(', ')
@@ -137,7 +142,7 @@ async function handleSkillCommand(
     case 'remove': {
       if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill remove <name> [--scope temp|project|global]' }
       const result = await removeSkill(provider, tempManager, parsed.scope, parsed.arg, cwd)
-      await publishPanelState(invocation.agent.session, config, provider, tempManager, panel)
+      await publishPanelState(ctx, invocation.agent.session, config, provider, tempManager, panel)
       return { kind: 'success', text: `${result.name} removed from ${result.scope}` }
     }
     case 'list': {

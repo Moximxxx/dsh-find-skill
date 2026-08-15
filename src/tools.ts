@@ -210,7 +210,7 @@ export function registerTools(
           agent?.session.header.id,
         )
         if (agent !== undefined) {
-          await publishPanelState(agent.session, config, provider, tempManager, panel)
+          await publishPanelState(ctx, agent.session, config, provider, tempManager, panel)
         }
         return result
       },
@@ -247,7 +247,7 @@ export function registerTools(
       async execute(args, exec) {
         const result = await removeSkill(provider, tempManager, parseScope(args.scope), args.name, exec.agent?.session.header.cwd)
         if (exec.agent !== undefined) {
-          await publishPanelState(exec.agent.session, config, provider, tempManager, panel)
+          await publishPanelState(ctx, exec.agent.session, config, provider, tempManager, panel)
         }
         return result
       },
