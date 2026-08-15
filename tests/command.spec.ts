@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSkillCommand } from '../src/command.ts'
+import { parseSkillCommand, resolveLoadTarget } from '../src/command.ts'
 
 describe('parseSkillCommand', () => {
   it('parses find with a query', () => {
@@ -39,6 +39,15 @@ describe('parseSkillCommand', () => {
     expect(parseSkillCommand('disable web-design-guidelines')).toEqual({ action: 'disable', arg: 'web-design-guidelines' })
     expect(parseSkillCommand('enable web-design-guidelines')).toEqual({ action: 'enable', arg: 'web-design-guidelines' })
     expect(parseSkillCommand('load vercel-react-best-practices')).toEqual({ action: 'load', arg: 'vercel-react-best-practices' })
+  })
+
+  it('resolves load targets from --path and --cwd', () => {
+    expect(resolveLoadTarget('load x --path /tmp/skills/foo')).toEqual({ mode: 'path', value: '/tmp/skills/foo' })
+    expect(resolveLoadTarget('load x --cwd /workspace')).toEqual({ mode: 'cwd', value: '/workspace' })
+    expect(resolveLoadTarget('load x --cwd')).toEqual({ mode: 'cwd', value: '' })
+    expect(resolveLoadTarget('load x --cwd ')).toEqual({ mode: 'cwd', value: '' })
+    expect(resolveLoadTarget('load x')).toBeUndefined()
+    expect(resolveLoadTarget('load x --scope temp')).toBeUndefined()
   })
 
   it('rejects invalid actions and scopes', () => {

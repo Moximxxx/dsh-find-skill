@@ -119,13 +119,11 @@ async function handleSkillCommand(
     }
     case 'load': {
       if (parsed.arg === undefined) return { kind: 'error', text: 'usage: /skill load <name> [--path <dir> | --cwd <dir>]' }
-      const tokens = invocation.rawInput.trim().split(/\s+/).filter(Boolean).slice(1)
-      const path = optionValue(tokens, '--path')
-      const loadCwd = optionValue(tokens, '--cwd')
-      if (path === undefined) return { kind: 'error', text: 'usage: /skill load <name> [--path <dir> | --cwd <dir>]' }
-      const error = path !== undefined
-        ? await panel.loadFromPath(invocation.agent as never, parsed.arg, path)
-        : await panel.loadByName(invocation.agent as never, parsed.arg, loadCwd ?? '')
+      const target = resolveLoadTarget(invocation.rawInput)
+      if (target === undefined) return { kind: 'error', text: 'usage: /skill load <name> [--path <dir> | --cwd <dir>]' }
+      const error = target.mode === 'path'
+        ? await panel.loadFromPath(invocation.agent as never, parsed.arg, target.value)
+        : await panel.loadByName(invocation.agent as never, parsed.arg, target.value)
       await publishPanelState(ctx, invocation.agent.session, config, provider, tempManager, panel)
       return error === undefined
         ? { kind: 'success', text: `loaded ${parsed.arg} into the latest context` }
@@ -201,6 +199,24 @@ export function parseSkillCommand(rawInput: string): ParsedSkillCommand {
     ...optionValue(rest, '--skill') !== undefined ? { skill: optionValue(rest, '--skill') } : {},
     ...scope !== undefined ? { scope: parseScope(scope) } : {},
   }
+}
+
+/**
+ * Resolves the target of a parsed `load` command line: the `--path` flag
+ * (managed directory load) or the `--cwd` flag (registry lookup with a
+ * workspace selector). A missing flag value yields an empty string so an
+ * empty `--cwd` still routes to the name-based lookup.
+ * @param rawInput - text following the command name, including whitespace.
+ * @returns the resolved target, or undefined when neither flag is present.
+ */
+export function resolveLoadTarget(rawInput: string): { mode: 'path' | 'cwd'; value: string } | undefined {
+  const tokens = rawInput.trim().split(/\s+/).filter(Boolean).slice(1)
+  const hasPath = tokens.includes('--path')
+  const hasCwd = tokens.includes('--cwd')
+  if (!hasPath && !hasCwd) return undefined
+  return hasPath
+    ? { mode: 'path', value: optionValue(tokens, '--path') ?? '' }
+    : { mode: 'cwd', value: optionValue(tokens, '--cwd') ?? '' }
 }
 
 function optionValue(tokens: string[], flag: string): string | undefined {
